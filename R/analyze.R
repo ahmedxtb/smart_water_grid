@@ -14,6 +14,7 @@ library(reshape2)
 library(lubridate)
 library(ggplot2)
 library(caret)
+library(GGally)
 
 # Print session info
 sessionInfo()
@@ -39,7 +40,7 @@ readfile <- function(file) {
     variablename <- createvariablefromfilename(file)
     
     data <- read.csv(file, comment.char = "#", col.names = c("Time", variablename), colClasses = c("character", "numeric"),
-                     na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created"))
+                     na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created", "CommFail", "ScanOff", "Configure", "I/OTimeout"))
     
     # Convert to POSIXct/POSIXt time format
     data$Time <- ymd_hms(data$Time)
@@ -56,13 +57,37 @@ readfiles <- function(fileslist) {
 # test
 #head(readfiles(list.files()[1:3]))
 
-
 selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
     subset(dataframe, Time >= begintime & Time <= endtime)
 }
 # test
 #selecttimerange(head(readfiles(list.files()[1:3])), ymd("2014-01-01"), ymd("2015-03-01"))
 
+addsensoralarms <- function(dataframe) {
+    # Select variable names containing 'vitnor'
+    matchingnames <- grep("vitnor", names(dataframe), value=TRUE)
+    
+    # Select entries of these variables above thresholds (redalarms threshold at 1.5, orangealarms at 1)
+    redalarms <- dataframe[, matchingnames] > 1.5
+    orangealarms <- dataframe[, matchingnames] > 1 & !(dataframe[, matchingnames] > 1.5)
+    
+    # Create new variable names for each of the matching names by appending '.alarm'
+    newnames <- paste(matchingnames, ".alarm", sep="")
+    
+    # Append new variables to dataframe. Set 'Green' as default, 'Orange' for orangealarms, 'Red' for redalarms
+    dataframe[, newnames] <- 'Green'
+    dataframe[, newnames][orangealarms] <- 'Orange'
+    dataframe[, newnames][redalarms] <- 'Red'
+    
+    # Convert new variables to factors
+    dataframe[, newnames] <- lapply(dataframe[, newnames], function (column) factor(column, levels=c('Green', 'Orange', 'Red')) )
+    
+    return(dataframe)
+}
+# test
+#dataframe <- data.frame(matrix(seq(0.2, 2, by=0.2), nrow=2, ncol=5))
+#names(dataframe)=c("Time", "test.vitnor1.lh", "test.vitnor2.lh", "test.vitnor3.sj", "test.var2.sj")
+#addsensoralarms(dataframe)
 
 
 ## EXPLORE DATA AND DATA QUALITY
@@ -117,20 +142,39 @@ length(files.other)
 # 3. Which time range should we choose in which both predictors and response variables are very well available?
 
 
-# 1. Investigating suitable vitnor variables
+# 1 & 3) Investigating suitable response variables and time range
 
-# Since availability of vitnor1, vitnor2 and vitnor3 variables seems to be related (when one is available
-# the others are often too), we only look at the vitnor1 variables for now (62 files).
-files.vitnor.select <- list.files(path=dir.data, pattern="vitnor1.*csv$")[1:30]
-data.vitnor.select <- readfiles(files.vitnor.select)
-#hist(data.vitnor.select[!is.na(data.vitnor.select[,2]), "Time"], breaks = "weeks")
-summary(data.vitnor.select)
-
-#head(data.vitnor.select[data.vitnor.select>1])
+# Based on large blocks of consecutive data seen in exploratory plots and counts of variables exceeding the threshold (>1)
+# we decided to choose the following vitnor variable as response variable, in the following time range
+files.response <- list.files(path=dir.data, pattern="MOBMS.*vitnor1.*csv$")
+data.response <- selecttimerange(readfiles(files.response), ymd("2015-06-25"), ymd("2015-07-05"))
+summary(data.response)
+ggplot(data.response, aes_string(x="Time", y=names(data.response)[2])) + geom_point()
 
 
-# Based on large blocks of consecutive data seen in previous exploratory plots we decided to choose
-# the following group of 3 vitnor variables as response variables, in a time range of 1 month
-files.response.select <- list.files(path=dir.data, pattern="MOLAB.*vitnor.*csv$")
-data.response.select <- selecttimerange(readfiles(files.response.select), ymd("2015-04-01"), ymd("2015-04-30"))
-summary(data.response.select)
+# # Find timestamps for vitnor events above threshold
+# # Select variable names containing 'vitnor'
+# vitnorvariables <- grep("vitnor", names(data.response.select), value=TRUE)
+# # Select entries of these variables above threshold
+# vitnoralarms <- data.response.select[, vitnorvariables] > 1
+# # Find alarm timestamps
+# vitnoralarmrows <- apply(vitnoralarms, 1, function(row) any(row, na.rm=TRUE))
+# vitnoralarmtimes <- data.response.select[vitnoralarmrows,]$Time
+# hist(vitnoralarmtimes, breaks="day")
+# # Count alarms per variable
+# apply(vitnoralarms, 2, function(column) sum(column, na.rm=TRUE))
+# 
+# # Count number of non-NA values per variable
+# apply(data.response.select, 2, function(column) sum(!is.na(column)))
+
+
+# 2) Select predictors
+
+#files.predictor.select <- union(files.turbidity, files.acidity)
+files.predictor <- files.temperature[1:10]
+data.predictor <- selecttimerange(readfiles(files.predictor), ymd("2015-06-25"), ymd("2015-07-05"))
+summary(data.predictor)
+ggplot(data.predictor, aes_string(x="Time", y=names(data.predictor)[8])) + geom_point()
+
+ggpairs(data.predictor[2:4])
+#data.predictor.select
