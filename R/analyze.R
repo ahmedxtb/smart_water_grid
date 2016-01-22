@@ -30,18 +30,27 @@ setwd(dir.data)
 
 ## FUNCTIONS
 
-readfiles <- function(fileslist) {
-    listofdataframes <- lapply(fileslist, function(file) read.csv(file, 
-                                                                  comment.char = "#", 
-                                                                  col.names = c("Time", file), 
-                                                                  colClasses = c("character", "numeric"),
-                                                                  na.strings = c("", " ", "CalcFailed", "Calc Failed", "BadInput", "Bad Input", "PtCreated", "Pt Created")))
+createvariablefromfilename <- function(filename) {
+    # Chop off beginning and end of filename and convert to valid variable name
+    variablename <- make.names(gsub("(^Dump_|.csv$)", "", filename))
+}
 
-    merged <- Reduce(function(x, y) merge(x, y, all=TRUE), listofdataframes)
+readfile <- function(file) {
+    variablename <- createvariablefromfilename(file)
+    
+    data <- read.csv(file, comment.char = "#", col.names = c("Time", variablename), colClasses = c("character", "numeric"),
+                     na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created"))
     
     # Convert to POSIXct/POSIXt time format
-    merged$Time <- ymd_hms(merged$Time)
+    data$Time <- ymd_hms(data$Time)
     
+    return(data)
+}
+
+readfiles <- function(fileslist) {
+    listofdataframes <- lapply(fileslist, function(file) readfile(file))
+    merged <- Reduce(function(x, y) merge(x, y, all=TRUE), listofdataframes)
+
     return(merged)
 }
 # test
@@ -64,7 +73,7 @@ selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
 # File name seems to contain variable info that is being measured
 # There are 186 files whose filename contains vitnor
 
-files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1:9]
+files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1:3]
 data.select <- readfiles(files.select)
 summary(data.select)
 
@@ -73,8 +82,6 @@ summary(data.select)
 # A few exploratory plots make clear that for some variables data is only available in specific time ranges
 
 ggplot(data.select, aes_string(x="Time", y=names(data.select)[2])) + geom_point()
-ggplot(data.select, aes_string(x="Time", y=names(data.select)[10])) + geom_point()
-
 
 # Checking number of files of certain measurement type (vitnor, temperature, flow, etc)
 # Note that we updated the pattern to filter for pressure measurements wrt the (likely incomplete/incorrect) documentation

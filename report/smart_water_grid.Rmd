@@ -14,8 +14,9 @@ Central question: What are the correlations between changes in water quality mea
 See documentation: https://github.com/dljvandenberg/smart_water_grid/blob/master/doc/Vitens%20Data%20Challenge%2007122015.pdf
 
 
+# Data Overview
 
-# Data Import
+### Preparations
 
 ```{r, message=FALSE}
 library(dplyr)
@@ -27,18 +28,27 @@ library(caret)
 dir.data <- "~/git/smart_water_grid/data"
 setwd(dir.data)
 
-readfiles <- function(fileslist) {
-    listofdataframes <- lapply(fileslist, function(file) read.csv(file, 
-                                                                  comment.char = "#", 
-                                                                  col.names = c("Time", file), 
-                                                                  colClasses = c("character", "numeric"),
-                                                                  na.strings = c("", " ", "CalcFailed", "Calc Failed", "BadInput", "Bad Input", "PtCreated", "Pt Created")))
+createvariablefromfilename <- function(filename) {
+    # Chop off beginning and end of filename and convert to valid variable name
+    variablename <- make.names(gsub("(^Dump_|.csv$)", "", filename))
+}
 
-    merged <- Reduce(function(x, y) merge(x, y, all=TRUE), listofdataframes)
-    
+readfile <- function(file) {
+    variablename <- createvariablefromfilename(file)
+
+    data <- read.csv(file, comment.char = "#", col.names = c("Time", variablename), colClasses = c("character", "numeric"),
+             na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created"))
+
     # Convert to POSIXct/POSIXt time format
-    merged$Time <- ymd_hms(merged$Time)
+    data$Time <- ymd_hms(data$Time)
     
+    return(data)
+}
+
+readfiles <- function(fileslist) {
+    listofdataframes <- lapply(fileslist, function(file) readfile(file))
+    merged <- Reduce(function(x, y) merge(x, y, all=TRUE), listofdataframes)
+
     return(merged)
 }
 
@@ -47,18 +57,17 @@ selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
 }
 ```
 
-# Data Overview
 
 ### Data files
 
 ```{r}
 files.all <- list.files(path=dir.data, pattern="csv$")
+head(files.all, n=5)
 ```
 
-* Our data set contains `r length(files.all)` files, all of which csv files with Time-Value pairs.
+* Our data set contains `r length(files.all)` files, all of which csv files with Timestamp-Value pairs.
 * Furthermore the data files contain some additional information in the header comments.
-* The file name contains the variable (code) that was measured
-    * Example: Dump_PE-FR-Deelbalansgebied-Westeinde-levering.csv
+* The file name contains the variable (code) that was measured.
 * The total size of the data set is a little over 5 GB
 
 
@@ -67,9 +76,9 @@ files.all <- list.files(path=dir.data, pattern="csv$")
 * According to the documentation measurements are done in the time range January 2014 to December 2015. We confirmed this by looking at the data
 * We also observe that some variables are only available in specific time ranges, often data is missing in large blocks of this 2-year time range. See example below
 
-```{r, message=FALSE}
+```{r, warning=FALSE, message=FALSE, cache=TRUE}
 setwd(dir.data)
-files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1]
+files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1:3]
 data.select <- readfiles(files.select)
 summary(data.select)
 ggplot(data.select, aes_string(x="Time", y=names(data.select)[2])) + geom_point()
@@ -91,10 +100,10 @@ In the documentation we see the following explanation of variable names:
 * Miscellaneous: status values of pumps, reservoirs, valves, etc
 
 ```{r}
-files.vitnor <- list.files(path=dir.data, pattern="vitnor.*csv$")
+files.vitnor <- list.files(path=dir.data, pattern="vitnor.*csv")
 files.temperature <- list.files(path=dir.data, pattern="TM.*csv$")
 files.flow <- list.files(path=dir.data, pattern="(FT|VO).*csv$")
-files.pressure <- list.files(path=dir.data, pattern="(PT|DO)[0123456789][0123456789]-.*csv$")
+files.pressure <- list.files(path=dir.data, pattern="(PT|DO)[0123456789][0123456789].*csv$")
 files.conductivity <- list.files(path=dir.data, pattern="(FR-PNB_TR00QI03PV|FR-POH_-TR00QI03PV).*csv$")
 files.acidity <- list.files(path=dir.data, pattern="(FR-PNB_TR00QI01PV|FR-POH_-TR00QI02PV|FR-PSP-TR00QI01|FR-PTW_TR01QI01PV).*csv$")
 files.turbidity <- list.files(path=dir.data, pattern="(FR-PTW_TR01QI02PV|FR-PSP-TR00QI02|FR-PNB_TR00QI02PV|FR-POH_-TR00QI01PV).*csv$")
@@ -125,6 +134,8 @@ Predictor variables:
 
 
 # Analysis
+
+
 
 
 
