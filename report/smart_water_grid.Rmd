@@ -1,0 +1,133 @@
+---
+title: "Correlating water quality fluctuations with sensor data"
+subtitle: "Vitens Open Data Challenge: Smart Water Grid"
+author: "Dennis van den Berg"
+date: "21/01/2016"
+output: html_document
+---
+
+
+# Introduction
+
+Central question: What are the correlations between changes in water quality measued by Eventlab sensors and other real-time measurements, statuses and alarm values?
+
+See documentation: https://github.com/dljvandenberg/smart_water_grid/blob/master/doc/Vitens%20Data%20Challenge%2007122015.pdf
+
+
+
+# Data Import
+
+```{r, message=FALSE}
+library(dplyr)
+library(reshape2)
+library(lubridate)
+library(ggplot2)
+library(caret)
+
+dir.data <- "~/git/smart_water_grid/data"
+setwd(dir.data)
+
+readfiles <- function(fileslist) {
+    listofdataframes <- lapply(fileslist, function(file) read.csv(file, 
+                                                                  comment.char = "#", 
+                                                                  col.names = c("Time", file), 
+                                                                  colClasses = c("character", "numeric"),
+                                                                  na.strings = c("", " ", "CalcFailed", "Calc Failed", "BadInput", "Bad Input", "PtCreated", "Pt Created")))
+
+    merged <- Reduce(function(x, y) merge(x, y, all=TRUE), listofdataframes)
+    
+    # Convert to POSIXct/POSIXt time format
+    merged$Time <- ymd_hms(merged$Time)
+    
+    return(merged)
+}
+
+selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
+    subset(dataframe, Time >= begintime & Time <= endtime)
+}
+```
+
+# Data Overview
+
+### Data files
+
+```{r}
+files.all <- list.files(path=dir.data, pattern="csv$")
+```
+
+* Our data set contains `r length(files.all)` files, all of which csv files with Time-Value pairs.
+* Furthermore the data files contain some additional information in the header comments.
+* The file name contains the variable (code) that was measured
+    * Example: Dump_PE-FR-Deelbalansgebied-Westeinde-levering.csv
+* The total size of the data set is a little over 5 GB
+
+
+### Time range
+
+* According to the documentation measurements are done in the time range January 2014 to December 2015. We confirmed this by looking at the data
+* We also observe that some variables are only available in specific time ranges, often data is missing in large blocks of this 2-year time range. See example below
+
+```{r, message=FALSE}
+setwd(dir.data)
+files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1]
+data.select <- readfiles(files.select)
+summary(data.select)
+ggplot(data.select, aes_string(x="Time", y=names(data.select)[2])) + geom_point()
+```
+
+
+### Variable overview
+
+In the documentation we see the following explanation of variable names:
+
+* Vitnor 1 / Vitnor 2 / Vitnor 3: output of Eventlab sensor (3 per sensor)
+    * In case of 1 or more vitnors >1 => alarm code Orange is given. In case of 1 or more vitnors >1.5 => alarm code Red.
+* Temperature: code contains 'TM'
+* Flow: code contains 'FT' or 'VO' (negative values allowed in case of opposite flow direction)
+* Pressure: code contains 'PT' or 'DO' (we found that these had to be followed by 2 digits in order not to select incorrect variables)
+* Conductivity: 'FR-PNB_TR00QI03PV-value' or 'FR-POH_-TR00QI03PV'-value
+* Acidity (pH): FR-PNB_TR00QI01PV-value, FR-POH_-TR00QI02PV-value, FR-PSP-TR00QI01-value or FR-PTW_TR01QI01PV-value
+* Turbidity: FR-PTW_TR01QI02PV-value, FR-PSP-TR00QI02-value, FR-PNB_TR00QI02PV-value or FR-POH_-TR00QI01PV-value
+* Miscellaneous: status values of pumps, reservoirs, valves, etc
+
+```{r}
+files.vitnor <- list.files(path=dir.data, pattern="vitnor.*csv$")
+files.temperature <- list.files(path=dir.data, pattern="TM.*csv$")
+files.flow <- list.files(path=dir.data, pattern="(FT|VO).*csv$")
+files.pressure <- list.files(path=dir.data, pattern="(PT|DO)[0123456789][0123456789]-.*csv$")
+files.conductivity <- list.files(path=dir.data, pattern="(FR-PNB_TR00QI03PV|FR-POH_-TR00QI03PV).*csv$")
+files.acidity <- list.files(path=dir.data, pattern="(FR-PNB_TR00QI01PV|FR-POH_-TR00QI02PV|FR-PSP-TR00QI01|FR-PTW_TR01QI01PV).*csv$")
+files.turbidity <- list.files(path=dir.data, pattern="(FR-PTW_TR01QI02PV|FR-PSP-TR00QI02|FR-PNB_TR00QI02PV|FR-POH_-TR00QI01PV).*csv$")
+files.other <- Reduce(setdiff, list(files.all, files.vitnor, files.temperature, files.flow, files.pressure, files.conductivity, files.acidity, files.turbidity))
+```
+
+
+### Predictor and response variables
+
+Response variables:
+
+* We are interested in vitnor data as response variables. Specifically, we focus on values >1 for these variables
+* There are `r length(files.vitnor)` variables for Eventlab measurements
+* These represent `r length(files.vitnor)/3` Eventlab sensors, each of which produce a set of three variables ('vitnor1', 'vitnor2' and 'vitnor3')
+
+Predictor variables:
+
+* That leaves `r length(files.all)-length(files.vitnor)` variables that we can use as potential predictors
+    * `r length(files.temperature)` for temperature
+    * `r length(files.flow)` for flow
+    * `r length(files.pressure)` for pressure
+    * `r length(files.conductivity)` for conductivity
+    * `r length(files.acidity)` for acidity
+    * `r length(files.turbidity)` for turbidity
+    * `r length(files.other)` other
+* The data quality of these varies. Some files do not even contain any data points.
+
+
+
+# Analysis
+
+
+
+# Data Source
+
+Raw data was provided by Vitens.
