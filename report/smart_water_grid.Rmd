@@ -35,10 +35,10 @@ createvariablefromfilename <- function(filename) {
 
 readfile <- function(file) {
     variablename <- createvariablefromfilename(file)
-
+    
     data <- read.csv(file, comment.char = "#", col.names = c("Time", variablename), colClasses = c("character", "numeric"),
-             na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created"))
-
+                     na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created", "CommFail", "ScanOff", "Configure", "I/OTimeout"))
+    
     # Convert to POSIXct/POSIXt time format
     data$Time <- ymd_hms(data$Time)
     
@@ -131,6 +131,19 @@ Predictor variables:
     * `r length(files.other)` other
 * The data quality of these varies. Some files do not even contain any data points.
 
+
+
+# Exploratory Analysis
+
+Based on large blocks of consecutive data seen in exploratory plots and counts of variables exceeding the threshold (>1) we decided to choose the following vitnor variable as response variable, in the following time range
+
+```{r}
+setwd(dir.data)
+files.response <- list.files(path=dir.data, pattern="MOBMS.*vitnor1.*csv$")
+data.response <- selecttimerange(readfiles(files.response), ymd("2015-06-25"), ymd("2015-07-05"))
+summary(data.response)
+ggplot(data.response, aes_string(x="Time", y=names(data.response)[2])) + geom_point()
+```
 
 
 # Analysis
