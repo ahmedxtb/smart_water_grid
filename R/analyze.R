@@ -15,6 +15,7 @@ library(lubridate)
 library(ggplot2)
 library(caret)
 library(GGally)
+library(Rmisc)
 
 # Print session info
 sessionInfo()
@@ -146,10 +147,39 @@ length(files.other)
 
 # Based on large blocks of consecutive data seen in exploratory plots and counts of variables exceeding the threshold (>1)
 # we decided to choose the following vitnor variable as response variable, in the following time range
-files.response <- list.files(path=dir.data, pattern="MOBMS.*vitnor1.*csv$")
-data.response <- selecttimerange(readfiles(files.response), ymd("2015-06-25"), ymd("2015-07-05"))
+pattern.response="FR-MOBMS-vitnor1-meetwaarde"
+#time.begin=ymd("2015-06-25")
+#time.end=ymd("2015-07-05")
+time.begin=ymd_hms("2015-06-29T00:00:00")
+time.end=ymd_hms("2015-06-29T12:00:00")
+files.response <- list.files(path=dir.data, pattern=pattern.response)
+vars.response <- createvariablefromfilename(files.response)
+data.response <- selecttimerange(readfiles(files.response), time.begin, time.end)
 summary(data.response)
-ggplot(data.response, aes_string(x="Time", y=names(data.response)[2])) + geom_point()
+ggplot(data.response, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab measurements (unaggregated)")
+
+pattern.response="FR-MOBMS-vitnor1-meetwaarde"
+time.begin.1=ymd("2015-06-25")
+time.end.1=ymd("2015-07-05")
+time.begin.2=ymd_hms("2015-06-29T00:00:00")
+time.end.2=ymd_hms("2015-06-29T12:00:00")
+time.begin.3=ymd_hms("2015-06-29T02:00:00")
+time.end.3=ymd_hms("2015-06-29T03:00:00")
+threshold.orange=1
+threshold.red=1.5
+files.response <- list.files(path=dir.data, pattern=pattern.response)
+vars.response <- createvariablefromfilename(files.response)
+data.response <- readfiles(files.response)
+data.response.1 <- selecttimerange(data.response, time.begin.1, time.end.1)
+data.response.2 <- selecttimerange(data.response, time.begin.2, time.end.2)
+data.response.3 <- selecttimerange(data.response, time.begin.3, time.end.3)
+plot.response.1 <- ggplot(data.response.1, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab - day timescale") + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+plot.response.2 <- ggplot(data.response.2, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab - hour timescale") + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+plot.response.3 <- ggplot(data.response.3, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab - minute timescale") + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+plot.response.1
+plot.response.2
+plot.response.3
+#multiplot(plot.response.1, plot.response.2, cols=2)
 
 
 # # Find timestamps for vitnor events above threshold
