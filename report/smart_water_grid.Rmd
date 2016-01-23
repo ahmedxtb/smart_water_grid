@@ -23,6 +23,7 @@ library(lubridate)
 library(ggplot2)
 library(caret)
 library(Rmisc)
+library(gplots)
 
 dir.data <- "~/git/smart_water_grid/data"
 setwd(dir.data)
@@ -54,6 +55,14 @@ readfiles <- function(fileslist) {
 selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
     subset(dataframe, Time >= begintime & Time <= endtime)
 }
+
+heatmap.abovethreshold <- function(eventlab.dataframe, threshold=1) {
+    # Drop first column (Time), convert to 1 if above threshold and 0 if not, convert to matrix
+    eventlab.alarms <- as.matrix(1 * (eventlab.dataframe[, -1] > threshold))
+    
+    # Draw heatmap
+    heatmap.2(eventlab.alarms, Rowv=NA, Colv=NA, col = c('Green', 'Red'), na.color='Grey', scale="column", trace="none", margins=c(5,0))
+}
 ```
 
 
@@ -84,6 +93,8 @@ data.select <- readfiles(files.select)
 summary(data.select)
 ggplot(data.select, aes_string(x="Time", y=names(data.select)[2])) + geom_point() + ggtitle("Raw data (unaggregated)")
 ```
+
+In general the frequency of data logging is 1 measurement per minute.
 
 
 ### Variable overview
@@ -169,6 +180,21 @@ plot.response.3 <- ggplot(data.response.3, aes_string(x="Time", y=names(data.res
 plot.response.1
 plot.response.2
 plot.response.3
+```
+
+
+### Heatmaps of Eventlab alarm events
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+# Select subset of vitnor variables, read data for specific time range and plot heatmap
+setwd(dir.data)
+pattern.eventlab="FR-MOBMS-vitnor"
+files.eventlab <- list.files(path=dir.data, pattern=pattern.eventlab)
+data.eventlab <- readfiles(files.eventlab)
+time.begin=ymd_hms("2015-05-20T00:00:00")
+time.end=ymd_hms("2015-06-30T00:00:00")
+data.eventlab.timerange <- selecttimerange(data.eventlab, time.begin, time.end)
+heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
 ```
 
 

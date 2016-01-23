@@ -14,8 +14,10 @@ library(reshape2)
 library(lubridate)
 library(ggplot2)
 library(caret)
-library(GGally)
+library(GGally)     # for ggpairs
 library(Rmisc)
+library(gplots)     # for heatmap2
+
 
 # Print session info
 sessionInfo()
@@ -89,6 +91,16 @@ addsensoralarms <- function(dataframe) {
 #dataframe <- data.frame(matrix(seq(0.2, 2, by=0.2), nrow=2, ncol=5))
 #names(dataframe)=c("Time", "test.vitnor1.lh", "test.vitnor2.lh", "test.vitnor3.sj", "test.var2.sj")
 #addsensoralarms(dataframe)
+
+heatmap.abovethreshold <- function(eventlab.dataframe, threshold=1) {
+    # Drop first column (Time), convert to 1 if above threshold and 0 if not, convert to matrix
+    eventlab.alarms <- as.matrix(1 * (eventlab.dataframe[, -1] > threshold))
+    
+    # Draw heatmap
+    heatmap.2(eventlab.alarms, Rowv=NA, Colv=NA, col = c('Green', 'Red'), na.color='Grey', scale="column", trace="none", margins=c(5,0))
+}
+# test
+#heatmap.abovethreshold(data.eventlab, threshold=1.5)
 
 
 ## EXPLORE DATA AND DATA QUALITY
@@ -208,3 +220,21 @@ ggplot(data.predictor, aes_string(x="Time", y=names(data.predictor)[8])) + geom_
 
 ggpairs(data.predictor[2:4])
 #data.predictor.select
+
+
+
+## Heatmap of Eventlab alarm events
+
+# Select subset of vitnor variables, read data for specific time range and plot heatmap
+#pattern.eventlab="vitnor"
+pattern.eventlab="FR-MOBMS-vitnor"
+files.eventlab <- list.files(path=dir.data, pattern=pattern.eventlab)
+data.eventlab <- readfiles(files.eventlab)
+time.begin=ymd_hms("2015-05-20T00:00:00")
+time.end=ymd_hms("2015-06-30T00:00:00")
+data.eventlab.timerange <- selecttimerange(data.eventlab, time.begin, time.end)
+summary(data.eventlab.timerange)
+heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
+
+
+# Optional: aggregate per day?
