@@ -89,15 +89,16 @@ ggplot(data.select, aes_string(x="Time", y=names(data.select)[2])) + geom_point(
 
 In the documentation we see the following explanation of variable names:
 
-* Vitnor 1 / Vitnor 2 / Vitnor 3: output of Eventlab sensor (3 per sensor)
-    * In case of 1 or more vitnors >1 => alarm code Orange is given. In case of 1 or more vitnors >1.5 => alarm code Red.
-* Temperature: code contains 'TM'
-* Flow: code contains 'FT' or 'VO' (negative values allowed in case of opposite flow direction)
-* Pressure: code contains 'PT' or 'DO' (we found that these had to be followed by 2 digits in order not to select incorrect variables)
-* Conductivity: 'FR-PNB_TR00QI03PV-value' or 'FR-POH_-TR00QI03PV'-value
-* Acidity (pH): FR-PNB_TR00QI01PV-value, FR-POH_-TR00QI02PV-value, FR-PSP-TR00QI01-value or FR-PTW_TR01QI01PV-value
-* Turbidity: FR-PTW_TR01QI02PV-value, FR-PSP-TR00QI02-value, FR-PNB_TR00QI02PV-value or FR-POH_-TR00QI01PV-value
-* Other: status values of pumps, reservoirs, valves, etc
+Quantity      | Variable code    | Remarks
+------------- | -------------    | -------------
+Eventlab data | `*vitnor*`       | 3 per sensor (`vitnor1`, `vitnor2`, `vitnor3`). Alarm codes are given in case 1 or more values above threshold (code Orange for `1 > max(vitnor*) >= 1.5`, code Red for `max(vitnor*) > 1.5`)
+Temperature   | `*TM*`           | 
+Flow          | `*FT*`, `*VO*`   | Negative values allowed (in case of opposite flow direction)
+Pressure      | `*PT*`, `*DO*`   | We found that these had to be followed by 2 digits (`*PTxx*`, `*DOxx*`) in order not to select incorrect variables 
+Conductivity  | `FR-PNB_TR00QI03PV*`, `FR-POH_-TR00QI03PV*` | 
+Acidity (pH)  | `FR-PNB_TR00QI01PV*`, `FR-POH_-TR00QI02PV*`, `FR-PSP-TR00QI01*`, `FR-PTW_TR01QI01PV*` | 
+Turbidity     | `FR-PTW_TR01QI02PV*`, `FR-PSP-TR00QI02*`, `FR-PNB_TR00QI02PV*`, `FR-POH_-TR00QI01PV*` | 
+Other         | (None of the above) | Status values of pumps, reservoirs, valves, etc
 
 ```{r, echo=FALSE}
 files.vitnor <- list.files(path=dir.data, pattern="vitnor.*csv")
