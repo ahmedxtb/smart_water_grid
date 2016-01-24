@@ -82,10 +82,15 @@ aggregatebytime <- function(dataframe, period="hour", method="mean") {
         warning(paste("Invalid period option ", "'", period, "'", sep=""))
         return(na.omit(dataframe))
     }
-    if (! method %in% c("mean", "max", "var")) {
+    if (! method %in% c("mean", "max", "var", "anyabovethreshold", "allabovethreshold")) {
         warning(paste("Invalid method option ", "'", method, "'", sep=""))
         return(na.omit(dataframe))
-    }    
+    }
+    
+    # Threshold checks. Return 1 if above threshold, 0 otherwise. (#TODO make threshold configurable)
+    anyabovethreshold <- function(values, threshold=1) { 1 * (max(values) > threshold) }
+    allabovethreshold <- function(values, threshold=1) { 1 * (min(values) > threshold) }
+    
     dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks=period))
     na.omit(aggregate(Value ~ Time + Variable, dataframe, FUN=method))
 }
@@ -111,6 +116,8 @@ files.other <- Reduce(setdiff, list(files.all, files.eventlab, files.temperature
 
 #df.eventlab <- readfiles(files.eventlab, aggregate.period="hour", aggregate.method="max")
 df.eventlab <- readfiles(files.eventlab[1:30], aggregate.period="hour", aggregate.method="max")
+#df.eventlab.alarms <- readfiles(files.eventlab[1:30], aggregate.period="hour", aggregate.method="anyabovethreshold")
+
 df.temperature <- readfiles(files.temperature, aggregate.period="hour", aggregate.method="mean")
 df.flow <- readfiles(files.flow, aggregate.period="hour", aggregate.method="mean")
 df.pressure <- readfiles(files.pressure, aggregate.period="hour", aggregate.method="mean")
@@ -121,10 +128,6 @@ df.turbidity <- readfiles(files.turbidity, aggregate.period="hour", aggregate.me
 #df.other <- readfiles(files.other, aggregate.period="hour", aggregate.method="mean")
 
 # TODO: troubleshoot df.flow not found
-
-
-
-## Eventlab vars: convert from numeric to factor (normal/alarm)
 
 
 
