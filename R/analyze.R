@@ -23,7 +23,8 @@ sessionInfo()
 
 # Variables
 dir.data <- "~/git/smart_water_grid/data"
-dir.results <- "~/git/smart_water_grid/data"
+dir.cache <- "~/git/smart_water_grid/cache"
+dir.results <- "~/git/smart_water_grid/results"
 #url.data <- "https://db.tt/wf2nir4S"
 
 # Workdir
@@ -60,6 +61,13 @@ readfile <- function(file) {
     return(data[, c(1, 3, 2)])
 }
 
+readfilesraw <- function(fileslist) {
+    listofdataframes <- lapply(fileslist, function(file) readfile(file))
+    merged <- Reduce(function(x, y) rbind(x, y), listofdataframes)
+    
+    return(merged)
+}
+
 # Read files and aggregate by time
 readfilesandaggregate <- function(fileslist, aggregate.period="hours") {
     listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period=aggregate.period))
@@ -77,7 +85,7 @@ aggregatebytime <- function(dataframe, period="hours") {
     statistics <- function(values) { c(mean=mean(values), var=var(values), min=min(values), max=max(values)) }
 
     # Checks
-    if (nrow(dataframe) == 0) {
+    if (nrow(na.omit(dataframe)) == 0) {
         return(dataframe)
     }
      if (! period %in% allowedperiods) {
@@ -92,6 +100,11 @@ aggregatebytime <- function(dataframe, period="hours") {
     # Aggregate and convert to proper data frame
     as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
 }
+
+selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
+    subset(dataframe, Time >= begintime & Time <= endtime)
+}
+
 
 
 ## List files for each data category (eventlab, temperature, flow, etc)
@@ -121,31 +134,78 @@ df.acidity.hourly <- readfilesandaggregate(files.acidity, aggregate.period="hour
 df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="hours")
 # Ignoring 'other' vars for now
 
+# # Write/read aggregated datasets to/from dir.cache
+# setwd(dir.cache)
+# save(df.eventlab.hourly, file="eventlab.hourly.Rdata")
+# save(df.temperature.hourly, file="temperature.hourly.Rdata")
+# save(df.flow.hourly, file="flow.hourly.Rdata")
+# save(df.pressure.hourly, file="pressure.hourly.Rdata")
+# save(df.conductivity.hourly, file="conductivity.hourly.Rdata")
+# save(df.acidity.hourly, file="acidity.hourly.Rdata")
+# save(df.turbidity.hourly, file="turbidity.hourly.Rdata")
+# load(file="eventlab.hourly.Rdata")
+# load(file="temperature.hourly.Rdata")
+# load(file="flow.hourly.Rdata")
+# load(file="pressure.hourly.Rdata")
+# load(file="conductivity.hourly.Rdata")
+# load(file="acidity.hourly.Rdata")
+# load(file="turbidity.hourly.Rdata")
+# set.wd(dir.data)
 
-## Aggregate and plot hourly variances (to investigate deltas/variability)
+
+
+## Plot hourly maximums and variances for Eventlab data
+
+plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=Value.max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
+plot.eventlab.hourly.var <- ggplot(df.eventlab.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly variances)")
+plot.eventlab.hourly.max + scale_y_log10()
+plot.eventlab.hourly.var
 
 
 
-## Multivariate plots (for multiple categories)
+## Plot hourly means and variances for other variables
 
-threshold.orange=1
-threshold.red=1.5
-plot.eventlab <- ggplot(df.eventlab, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)")+ geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+# Hourly means
+plot.temperature.hourly.mean <- ggplot(df.temperature.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)")
+plot.flow.hourly.mean <- ggplot(df.flow.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)")
+plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)")
+plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)")
+plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)")
+plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
 
-plot.turbidity.means <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
+plot.temperature.hourly.mean
+plot.flow.hourly.mean
+plot.pressure.hourly.mean + scale_y_log10()
+plot.conductivity.hourly.mean + scale_y_log10()
+plot.acidity.hourly.mean + scale_y_log10()
+plot.turbidity.hourly.mean + scale_y_log10()
 
-plot.eventlab + scale_y_log10()
-plot.temperature + scale_y_log10()    # Can be negative (linear scale?)
-plot.flow + scale_y_log10()           # Can be negative (linear scale?)
-plot.pressure + scale_y_log10()
-plot.conductivity + scale_y_log10()
-plot.acidity + scale_y_log10()
-plot.turbidity.means + scale_y_log10()
+# Hourly vars (to investigate deltas/variability)
+plot.temperature.hourly.var <- ggplot(df.temperature.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Temperature (hourly vars)")
+plot.flow.hourly.var <- ggplot(df.flow.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Flow (hourly vars)")
+plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Pressure (hourly vars)")
+plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly vars)")
+plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly vars)")
+plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly vars)")
+
+plot.temperature.hourly.var + scale_y_log10()
+plot.flow.hourly.var + scale_y_log10()
+plot.pressure.hourly.var + scale_y_log10()
+plot.conductivity.hourly.var + scale_y_log10()
+plot.acidity.hourly.var + scale_y_log10()
+plot.turbidity.hourly.var + scale_y_log10()
 
 
 
 ## Heatmaps (at least for eventlab, possibly for other categories)
 
+# heatmap.abovethreshold <- function(eventlab.dataframe, threshold=1) {
+#     # Drop first column (Time), convert to 1 if above threshold and 0 if not, convert to matrix
+#     eventlab.alarms <- as.matrix(1 * (eventlab.dataframe[, -1] > threshold))
+#     
+#     # Draw heatmap
+#     heatmap.2(eventlab.alarms, Rowv=NA, Colv=NA, col = c('Green', 'Red'), na.color='Grey', scale="column", trace="none", margins=c(5,0))
+# }
 
 
 ## Dendrogram (related vars within categories)
