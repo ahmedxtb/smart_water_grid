@@ -63,9 +63,9 @@ readfile <- function(file) {
 # Read files and optionally aggregate. Option aggregate="no"|"hourlymean"|"hourlymax"
 readfiles <- function(fileslist, aggregate = "no") {
     if (aggregate == "hourlymean") {
-        listofdataframes <- lapply(fileslist, function(file) aggregatehourlymean(readfile(file)))
+        listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period="hour", method="mean"))
     } else if (aggregate == "hourlymax") {
-        listofdataframes <- lapply(fileslist, function(file) aggregatehourlymax(readfile(file)))
+        listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period="hour", method="max"))
     } else {
         listofdataframes <- lapply(fileslist, function(file) readfile(file))
     }
@@ -76,22 +76,21 @@ readfiles <- function(fileslist, aggregate = "no") {
     return(merged)
 }
 
-aggregatehourlymean <- function(dataframe) {
+aggregatebytime <- function(dataframe, period="hour", method="mean") {
     if (nrow(dataframe) == 0) {
         return(dataframe)
     }
-    dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks = "hour"))
-    aggregate(Value ~ Time + Variable, dataframe, FUN=mean)
-}
-
-aggregatehourlymax <- function(dataframe) {
-    if (nrow(dataframe) == 0) {
-        return(dataframe)
+    if (! period %in% c("hour", "day", "week", "month")) {
+        warning(paste("Invalid period option ", "'", period, "'", sep=""))
+        return(na.omit(dataframe))
     }
-    dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks = "hour"))
-    aggregate(Value ~ Time + Variable, dataframe, FUN=max)
+    if (! method %in% c("mean", "max", "var")) {
+        warning(paste("Invalid method option ", "'", method, "'", sep=""))
+        return(na.omit(dataframe))
+    }    
+    dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks=period))
+    na.omit(aggregate(Value ~ Time + Variable, dataframe, FUN=method))
 }
-
 
 
 ## List files for each data category (eventlab, temperature, flow, etc)
