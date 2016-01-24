@@ -61,7 +61,7 @@ readfile <- function(file) {
 }
 
 # Read files and aggregate by time
-readfilesandaggregate <- function(fileslist, aggregate.period="hour") {
+readfilesandaggregate <- function(fileslist, aggregate.period="hours") {
     listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period=aggregate.period))
     
     # Merge vertically
@@ -70,21 +70,25 @@ readfilesandaggregate <- function(fileslist, aggregate.period="hour") {
     return(merged)
 }
 
-aggregatebytime <- function(dataframe, period="hour") {
-    if (nrow(dataframe) == 0) {
-        return(dataframe)
-    }
-    if (! period %in% c("hour", "day", "week", "month")) {
-        warning(paste("Invalid period option ", "'", period, "'", sep=""))
-        return(na.omit(dataframe))
-    }
-    
+aggregatebytime <- function(dataframe, period="hours") {
+    allowedperiods <- c("none", "secs", "mins", "hours", "days", "weeks", "months", "quarters", "years")
+
     # Calculate new aggregate vars 'mean', 'var', 'min', 'max'
     statistics <- function(values) { c(mean=mean(values), var=var(values), min=min(values), max=max(values)) }
 
-    # Break into time periods
-    dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks=period))
-
+    # Checks
+    if (nrow(dataframe) == 0) {
+        return(dataframe)
+    }
+     if (! period %in% allowedperiods) {
+         warning(paste("Invalid period option ", "'", period, "'", sep=""))         
+     } else {
+         if (! period == "none") {
+             # Break into time periods
+             dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks=period))
+         }
+     }
+    
     # Aggregate and convert to proper data frame
     as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
 }
@@ -108,13 +112,13 @@ files.other <- Reduce(setdiff, list(files.all, files.eventlab, files.temperature
 
 # Why aggregates? Less NAs, less peak events, smaller data sets, easier finding signals with small time lag
 
-df.eventlab.hourly <- readfilesandaggregate(files.eventlab, aggregate.period="hour")
-df.temperature.hourly <- readfilesandaggregate(files.temperature, aggregate.period="hour")
-df.flow.hourly <- readfilesandaggregate(files.flow, aggregate.period="hour")
-df.pressure.hourly <- readfilesandaggregate(files.pressure, aggregate.period="hour")
-df.conductivity.hourly <- readfilesandaggregate(files.conductivity, aggregate.period="hour")
-df.acidity.hourly <- readfilesandaggregate(files.acidity, aggregate.period="hour")
-df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="hour")
+df.eventlab.hourly <- readfilesandaggregate(files.eventlab, aggregate.period="hours")
+df.temperature.hourly <- readfilesandaggregate(files.temperature, aggregate.period="hours")
+df.flow.hourly <- readfilesandaggregate(files.flow, aggregate.period="hours")
+df.pressure.hourly <- readfilesandaggregate(files.pressure, aggregate.period="hours")
+df.conductivity.hourly <- readfilesandaggregate(files.conductivity, aggregate.period="hours")
+df.acidity.hourly <- readfilesandaggregate(files.acidity, aggregate.period="hours")
+df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="hours")
 # Ignoring 'other' vars for now
 
 
