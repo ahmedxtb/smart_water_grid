@@ -132,7 +132,7 @@ df.pressure.hourly <- readfilesandaggregate(files.pressure, aggregate.period="ho
 df.conductivity.hourly <- readfilesandaggregate(files.conductivity, aggregate.period="hours")
 df.acidity.hourly <- readfilesandaggregate(files.acidity, aggregate.period="hours")
 df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="hours")
-# Ignoring 'other' vars for now
+# Ignoring 'other' variables for now
 
 # # Write/read aggregated datasets to/from dir.cache
 # setwd(dir.cache)
@@ -150,7 +150,7 @@ df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="
 # load(file="conductivity.hourly.Rdata")
 # load(file="acidity.hourly.Rdata")
 # load(file="turbidity.hourly.Rdata")
-# set.wd(dir.data)
+# setwd(dir.data)
 
 
 
@@ -197,6 +197,29 @@ plot.turbidity.hourly.var + scale_y_log10()
 
 
 
+## Explore single Eventlab variable
+
+pattern.response="FR-MOBMS-vitnor1-meetwaarde"
+time.begin.1=ymd("2015-06-25")
+time.end.1=ymd("2015-07-05")
+time.begin.2=ymd_hms("2015-06-29T00:00:00")
+time.end.2=ymd_hms("2015-06-29T12:00:00")
+time.begin.3=ymd_hms("2015-06-29T02:00:00")
+time.end.3=ymd_hms("2015-06-29T03:00:00")
+threshold.orange=1
+threshold.red=1.5
+files.response <- list.files(path=dir.data, pattern=pattern.response)
+variables.response <- createvariablefromfilename(files.response)
+
+setwd(dir.data)
+df.eventlab.response <- readfilesraw(files.response)
+plot.response <- ggplot(df.eventlab.response, aes(x=Time, y=Value)) + geom_point() + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.1, time.end.1)))
+plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.2, time.end.2)))
+plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
+
+
+
 ## Heatmaps (at least for eventlab, possibly for other categories)
 
 # heatmap.abovethreshold <- function(eventlab.dataframe, threshold=1) {
@@ -208,7 +231,7 @@ plot.turbidity.hourly.var + scale_y_log10()
 # }
 
 
-## Dendrogram (related vars within categories)
+## Dendrogram (related variables within categories)
 
 
 

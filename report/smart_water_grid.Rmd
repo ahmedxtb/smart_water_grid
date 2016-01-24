@@ -3,7 +3,9 @@ title: "Correlating water quality fluctuations with sensor data"
 subtitle: "Vitens Open Data Challenge: Smart Water Grid"
 author: "Dennis van den Berg"
 date: "24/01/2016"
-output: html_document
+output:
+  html_document:
+    fig_width: 10
 ---
 
 
@@ -22,10 +24,12 @@ library(reshape2)
 library(lubridate)
 library(ggplot2)
 library(caret)
+library(GGally)     # for ggpairs
 library(Rmisc)
-library(gplots)
+library(gplots)     # for heatmap.2
 
 dir.data <- "~/git/smart_water_grid/data"
+dir.cache <- "~/git/smart_water_grid/cache"
 setwd(dir.data)
 
 createvariablefromfilename <- function(filename) {
@@ -36,32 +40,67 @@ createvariablefromfilename <- function(filename) {
 readfile <- function(file) {
     variablename <- createvariablefromfilename(file)
     
-    data <- read.csv(file, comment.char = "#", col.names = c("Time", variablename), colClasses = c("character", "numeric"),
+    data <- read.csv(file, comment.char = "#", col.names = c("Time", "Value"), colClasses = c("character", "numeric"),
                      na.strings = c("", " ", "CalcFailed", "Calc Failed", "Bad", "BadInput", "Bad Input", "PtCreated", "Pt Created", "CommFail", "ScanOff", "Configure", "I/OTimeout"))
     
-    # Convert to POSIXct/POSIXt time format
-    data$Time <- ymd_hms(data$Time)
-    
-    return(data)
+    # Check for empty file
+    if(nrow(data) != 0) {
+        # Convert to POSIXct/POSIXt time format
+        data$Time <- ymd_hms(data$Time)
+        
+        # Add variablename as column
+        data$Variable <- variablename
+    } else {
+        # Add Variable column
+        data <- data.frame(Time=character(), Value=numeric(), Variable=character())
+    }
+
+    # Reorder columns
+    return(data[, c(1, 3, 2)])
 }
 
-readfiles <- function(fileslist) {
+readfilesraw <- function(fileslist) {
     listofdataframes <- lapply(fileslist, function(file) readfile(file))
-    merged <- Reduce(function(x, y) merge(x, y, all=TRUE), listofdataframes)
-
+    merged <- Reduce(function(x, y) rbind(x, y), listofdataframes)
+    
     return(merged)
+}
+
+# Read files and aggregate by time
+readfilesandaggregate <- function(fileslist, aggregate.period="hours") {
+    listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period=aggregate.period))
+    
+    # Merge vertically
+    merged <- Reduce(function(x, y) rbind(x, y), listofdataframes)
+    
+    return(merged)
+}
+
+aggregatebytime <- function(dataframe, period="hours") {
+    allowedperiods <- c("none", "secs", "mins", "hours", "days", "weeks", "months", "quarters", "years")
+
+    # Calculate new aggregate vars 'mean', 'var', 'min', 'max'
+    statistics <- function(values) { c(mean=mean(values), var=var(values), min=min(values), max=max(values)) }
+
+    # Checks
+    if (nrow(na.omit(dataframe)) == 0) {
+        return(dataframe)
+    }
+     if (! period %in% allowedperiods) {
+         warning(paste("Invalid period option ", "'", period, "'", sep=""))         
+     } else {
+         if (! period == "none") {
+             # Break into time periods
+             dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks=period))
+         }
+     }
+    
+    # Aggregate and convert to proper data frame
+    as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
 }
 
 selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
     subset(dataframe, Time >= begintime & Time <= endtime)
-}
-
-heatmap.abovethreshold <- function(eventlab.dataframe, threshold=1) {
-    # Drop first column (Time), convert to 1 if above threshold and 0 if not, convert to matrix
-    eventlab.alarms <- as.matrix(1 * (eventlab.dataframe[, -1] > threshold))
-    
-    # Draw heatmap
-    heatmap.2(eventlab.alarms, Rowv=NA, Colv=NA, col = c('Green', 'Red'), na.color='Grey', scale="column", trace="none", margins=c(5,0))
 }
 ```
 
@@ -88,13 +127,13 @@ According to the documentation measurements are done in the time range January 2
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 setwd(dir.data)
-files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1]
-data.select <- readfiles(files.select)
+files.select <- list.files(path=dir.data, pattern="vitnor.*csv$")[1:3]
+data.select <- readfilesraw(files.select)
 summary(data.select)
-ggplot(data.select, aes_string(x="Time", y=names(data.select)[2])) + geom_point() + ggtitle("Raw data (unaggregated)")
+ggplot(data.select, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Raw data (unaggregated)")
 ```
 
-In general the frequency of data logging is 1 measurement per minute.
+The frequency of data logging is 1 measurement per minute at most, though certainly not for all variables.
 
 
 ### Variable overview
@@ -113,14 +152,14 @@ Turbidity     | `FR-PTW_TR01QI02PV*`, `FR-PSP-TR00QI02*`, `FR-PNB_TR00QI02PV*`, 
 Other         | (None of the above) | Status values of pumps, reservoirs, valves, etc
 
 ```{r, echo=FALSE}
-files.vitnor <- list.files(path=dir.data, pattern="vitnor.*csv")
+files.eventlab <- list.files(path=dir.data, pattern="vitnor.*csv$")
 files.temperature <- list.files(path=dir.data, pattern="TM.*csv$")
 files.flow <- list.files(path=dir.data, pattern="(FT|VO).*csv$")
-files.pressure <- list.files(path=dir.data, pattern="(PT|DO)[0123456789][0123456789].*csv$")
+files.pressure <- list.files(path=dir.data, pattern="(PT|DO)[0123456789][0123456789]-.*csv$")
 files.conductivity <- list.files(path=dir.data, pattern="(FR-PNB_TR00QI03PV|FR-POH_-TR00QI03PV).*csv$")
 files.acidity <- list.files(path=dir.data, pattern="(FR-PNB_TR00QI01PV|FR-POH_-TR00QI02PV|FR-PSP-TR00QI01|FR-PTW_TR01QI01PV).*csv$")
 files.turbidity <- list.files(path=dir.data, pattern="(FR-PTW_TR01QI02PV|FR-PSP-TR00QI02|FR-PNB_TR00QI02PV|FR-POH_-TR00QI01PV).*csv$")
-files.other <- Reduce(setdiff, list(files.all, files.vitnor, files.temperature, files.flow, files.pressure, files.conductivity, files.acidity, files.turbidity))
+files.other <- Reduce(setdiff, list(files.all, files.eventlab, files.temperature, files.flow, files.pressure, files.conductivity, files.acidity, files.turbidity))
 ```
 
 
@@ -128,11 +167,11 @@ files.other <- Reduce(setdiff, list(files.all, files.vitnor, files.temperature, 
 
 We are interested in Eventlab measurements (variable names `*vitnor*`) as **response variables**
 
-* There are `r length(files.vitnor)` variables for Eventlab measurements
-* These represent `r length(files.vitnor)/3` Eventlab sensors, each of which produce a set of three variables (`*vitnor1*`, `*vitnor2*` and `*vitnor3*`)
+* There are `r length(files.eventlab)` variables for Eventlab measurements
+* These represent `r length(files.eventlab)/3` Eventlab sensors, each of which produce a set of three variables (`*vitnor1*`, `*vitnor2*` and `*vitnor3*`)
 * Specifically, we are interested in events with values above a threshold for these variables (>1).
 
-That leaves `r length(files.all)-length(files.vitnor)` variables that we can use as **potential predictors**:
+That leaves `r length(files.all)-length(files.eventlab)` variables that we can use as **potential predictors**:
 
 * `r length(files.temperature)` for temperature
 * `r length(files.flow)` for flow
@@ -144,11 +183,12 @@ That leaves `r length(files.all)-length(files.vitnor)` variables that we can use
 
 The data quality of these variables varies. Some files do not even contain any data points.
 
+We decided not to focus on the 'other' variable for now, as we have limited background of their meaning.
 
 
 ## Exploratory Analysis
 
-### Selection of Data Subset
+### Zooming in on Eventlab data
 
 ```{r, echo=FALSE}
 pattern.response="FR-MOBMS-vitnor1-meetwaarde"
@@ -161,26 +201,113 @@ time.end.3=ymd_hms("2015-06-29T03:00:00")
 threshold.orange=1
 threshold.red=1.5
 files.response <- list.files(path=dir.data, pattern=pattern.response)
-vars.response <- createvariablefromfilename(files.response)
+variables.response <- createvariablefromfilename(files.response)
 ```
 
-Based on large blocks of consecutive data seen in exploratory plots and multiple peaks of Eventlab variables exceeding the threshold we decided to focus on the `r vars.response` variable as response variable.
+Based on large blocks of consecutive data seen in exploratory plots and multiple peaks of Eventlab variables exceeding the threshold we decided to focus on the `r variables.response` variable as response variable.
 
-Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the vitnor values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself within hours:
-
-```{r, echo=FALSE}
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 setwd(dir.data)
-data.response <- readfiles(files.response)
-data.response.1 <- selecttimerange(data.response, time.begin.1, time.end.1)
-data.response.2 <- selecttimerange(data.response, time.begin.2, time.end.2)
-data.response.3 <- selecttimerange(data.response, time.begin.3, time.end.3)
-plot.response.1 <- ggplot(data.response.1, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab - day timescale") + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
-plot.response.2 <- ggplot(data.response.2, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab - hour timescale") + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
-plot.response.3 <- ggplot(data.response.3, aes_string(x="Time", y=names(data.response)[2])) + geom_point() + ggtitle("Eventlab - minute timescale") + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
-plot.response.1
-plot.response.2
-plot.response.3
+df.eventlab.response <- readfilesraw(files.response)
+plot.response <- ggplot(df.eventlab.response, aes(x=Time, y=Value)) + geom_point() + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.1, time.end.1)))
+plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.2, time.end.2)))
 ```
+Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the vitnor values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour:
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
+```
+
+
+
+### Aggregate data per hour
+
+We decided to aggregate hourly data (mean, var, min, max of hour blocks) in order to compress our data set, to reduce the chances of different variables both having a value for a given time, to aggregate the number of peak events (in Eventlab measurements; only 1 per hour now) and also to increase our chances of finding correlated signals in which a small time lag between variables is present (hour time scale).
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+# df.eventlab.hourly <- readfilesandaggregate(files.eventlab, aggregate.period="hours")
+# df.temperature.hourly <- readfilesandaggregate(files.temperature, aggregate.period="hours")
+# df.flow.hourly <- readfilesandaggregate(files.flow, aggregate.period="hours")
+# df.pressure.hourly <- readfilesandaggregate(files.pressure, aggregate.period="hours")
+# df.conductivity.hourly <- readfilesandaggregate(files.conductivity, aggregate.period="hours")
+# df.acidity.hourly <- readfilesandaggregate(files.acidity, aggregate.period="hours")
+# df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="hours")
+# # Ignoring 'other' variables for now
+
+# # Write/read aggregated datasets to/from dir.cache
+setwd(dir.cache)
+# save(df.eventlab.hourly, file="eventlab.hourly.Rdata")
+# save(df.temperature.hourly, file="temperature.hourly.Rdata")
+# save(df.flow.hourly, file="flow.hourly.Rdata")
+# save(df.pressure.hourly, file="pressure.hourly.Rdata")
+# save(df.conductivity.hourly, file="conductivity.hourly.Rdata")
+# save(df.acidity.hourly, file="acidity.hourly.Rdata")
+# save(df.turbidity.hourly, file="turbidity.hourly.Rdata")
+load(file="eventlab.hourly.Rdata")
+load(file="temperature.hourly.Rdata")
+#load(file="flow.hourly.Rdata")
+load(file="pressure.hourly.Rdata")
+load(file="conductivity.hourly.Rdata")
+load(file="acidity.hourly.Rdata")
+load(file="turbidity.hourly.Rdata")
+setwd(dir.data)
+```
+
+
+### Hourly maximums for Eventlab data
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=Value.max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
+plot.eventlab.hourly.max + scale_y_log10()
+```
+
+We notice many peak events above the orange and red thresholds (>1 resp >1.5) for Eventlab sensor data.
+
+
+### Hourly means for other (potential predictor) variables
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+plot.temperature.hourly.mean <- ggplot(df.temperature.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)")
+#plot.flow.hourly.mean <- ggplot(df.flow.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)")
+plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)")
+plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)")
+plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)")
+plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
+
+plot.temperature.hourly.mean
+#plot.flow.hourly.mean
+plot.pressure.hourly.mean + scale_y_log10()
+plot.conductivity.hourly.mean + scale_y_log10()
+plot.acidity.hourly.mean + scale_y_log10()
+plot.turbidity.hourly.mean + scale_y_log10()
+```
+
+
+### Hourly variances
+
+Because we are interested in correlated peak events, we also looked at the hourly variance of these variables, as a measure of their variability on the timescale of less than an hour.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+plot.eventlab.hourly.var <- ggplot(df.eventlab.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly variances)")
+plot.eventlab.hourly.var + scale_y_log10()
+```
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+plot.temperature.hourly.var <- ggplot(df.temperature.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Temperature (hourly vars)")
+#plot.flow.hourly.var <- ggplot(df.flow.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Flow (hourly vars)")
+plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Pressure (hourly vars)")
+plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly vars)")
+plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly vars)")
+plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly vars)")
+
+plot.temperature.hourly.var + scale_y_log10()
+#plot.flow.hourly.var + scale_y_log10()
+plot.pressure.hourly.var + scale_y_log10()
+plot.conductivity.hourly.var + scale_y_log10()
+plot.acidity.hourly.var + scale_y_log10()
+plot.turbidity.hourly.var + scale_y_log10()
+```
+
 
 
 ### Heatmaps of Eventlab alarm events
@@ -190,11 +317,11 @@ plot.response.3
 setwd(dir.data)
 pattern.eventlab="FR-MOBMS-vitnor"
 files.eventlab <- list.files(path=dir.data, pattern=pattern.eventlab)
-data.eventlab <- readfiles(files.eventlab)
+data.eventlab <- readfilesraw(files.eventlab)
 time.begin=ymd_hms("2015-05-20T00:00:00")
 time.end=ymd_hms("2015-06-30T00:00:00")
 data.eventlab.timerange <- selecttimerange(data.eventlab, time.begin, time.end)
-heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
+#heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
 ```
 
 
@@ -202,22 +329,16 @@ heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
 
 
 
-## Follow-up Actions
-
-Mention that Eventlab peaks justify hourly aggregations (mean, max, ..). Also causes less NAs, less peak events, smaller data set, easier finding signals with small time lag
-
+## Further Research
 
 Data import & aggregation:
 
-1. Select time range during import (instead of after)
-1. Aggregate using hourly variance (to see fluctuations/deltas)
 1. Aggregate above threshold TRUE/FALSE (apply to Eventlab data)
 
 
 Summarizations & visualizations:
 
-1. Multivariate plots
-1. Optional tables, boxplots
+1. Multivariate plots -> focus on interesting time range
 1. Pair plots
 1. Heatmaps (al least for eventlab, possibly for other categories)
 1. Dendrogram (related vars within categories)
@@ -231,7 +352,7 @@ Machine Learning & Predictions:
 1. Merge predictor set and response var
 1. Remove rows with NA (consider these as clean datasets that we can work with)
 1. Split into train and test sets
-1. Apply ML algorithm (RF, GBM, Tree)
+1. Apply ML algorithm (RF, GBM, Tree model)
 1. Predict and validate
 1. Check list of important predictors
 
@@ -239,4 +360,4 @@ Machine Learning & Predictions:
 
 ## Data Source
 
-Raw data was provided by Vitens.
+The set of raw data was provided by Vitens.
