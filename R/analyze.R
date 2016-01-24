@@ -60,13 +60,9 @@ readfile <- function(file) {
     return(data[, c(1, 3, 2)])
 }
 
-# Read files and optionally aggregate
-readfiles <- function(fileslist, aggregate.period="hour", aggregate.method="none") {
-    if (! aggregate.method == "none") {
-        listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period=aggregate.period, method=aggregate.method))
-    } else {
-        listofdataframes <- lapply(fileslist, function(file) readfile(file))
-    }
+# Read files and aggregate by time
+readfilesandaggregate <- function(fileslist, aggregate.period="hour") {
+    listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period=aggregate.period))
     
     # Merge vertically
     merged <- Reduce(function(x, y) rbind(x, y), listofdataframes)
@@ -74,7 +70,7 @@ readfiles <- function(fileslist, aggregate.period="hour", aggregate.method="none
     return(merged)
 }
 
-aggregatebytime <- function(dataframe, period="hour", method="mean") {
+aggregatebytime <- function(dataframe, period="hour") {
     if (nrow(dataframe) == 0) {
         return(dataframe)
     }
@@ -82,17 +78,15 @@ aggregatebytime <- function(dataframe, period="hour", method="mean") {
         warning(paste("Invalid period option ", "'", period, "'", sep=""))
         return(na.omit(dataframe))
     }
-    if (! method %in% c("mean", "max", "var", "anyabovethreshold", "allabovethreshold")) {
-        warning(paste("Invalid method option ", "'", method, "'", sep=""))
-        return(na.omit(dataframe))
-    }
     
-    # Threshold checks. Return 1 if above threshold, 0 otherwise. (#TODO make threshold configurable)
-    anyabovethreshold <- function(values, threshold=1) { 1 * (max(values) > threshold) }
-    allabovethreshold <- function(values, threshold=1) { 1 * (min(values) > threshold) }
-    
+    # Calculate new aggregate vars 'mean', 'var', 'min', 'max'
+    statistics <- function(values) { c(mean=mean(values), var=var(values), min=min(values), max=max(values)) }
+
+    # Break into time periods
     dataframe$Time <- as.POSIXct(cut(dataframe$Time, breaks=period))
-    na.omit(aggregate(Value ~ Time + Variable, dataframe, FUN=method))
+
+    # Aggregate and convert to proper data frame
+    as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
 }
 
 
@@ -110,24 +104,21 @@ files.other <- Reduce(setdiff, list(files.all, files.eventlab, files.temperature
 
 
 
-## Create dataset for each category
+## Create dataset for each category and take hourly aggregates
 
-# Note that we took hourly aggregates (less NAs, less peak events, smaller data sets, easier finding signals with small time lag)
+# Why aggregates? Less NAs, less peak events, smaller data sets, easier finding signals with small time lag
 
-#df.eventlab <- readfiles(files.eventlab, aggregate.period="hour", aggregate.method="max")
-df.eventlab <- readfiles(files.eventlab[1:30], aggregate.period="hour", aggregate.method="max")
-#df.eventlab.alarms <- readfiles(files.eventlab[1:30], aggregate.period="hour", aggregate.method="anyabovethreshold")
-
-df.temperature <- readfiles(files.temperature, aggregate.period="hour", aggregate.method="mean")
-df.flow <- readfiles(files.flow, aggregate.period="hour", aggregate.method="mean")
-df.pressure <- readfiles(files.pressure, aggregate.period="hour", aggregate.method="mean")
-df.conductivity <- readfiles(files.conductivity, aggregate.period="hour", aggregate.method="mean")
-df.acidity <- readfiles(files.acidity, aggregate.period="hour", aggregate.method="mean")
-df.turbidity <- readfiles(files.turbidity, aggregate.period="hour", aggregate.method="mean")
+df.eventlab.hourly <- readfilesandaggregate(files.eventlab, aggregate.period="hour")
+df.temperature.hourly <- readfilesandaggregate(files.temperature, aggregate.period="hour")
+df.flow.hourly <- readfilesandaggregate(files.flow, aggregate.period="hour")
+df.pressure.hourly <- readfilesandaggregate(files.pressure, aggregate.period="hour")
+df.conductivity.hourly <- readfilesandaggregate(files.conductivity, aggregate.period="hour")
+df.acidity.hourly <- readfilesandaggregate(files.acidity, aggregate.period="hour")
+df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="hour")
 # Ignoring 'other' vars for now
-#df.other <- readfiles(files.other, aggregate.period="hour", aggregate.method="mean")
 
-# TODO: troubleshoot df.flow not found
+
+## Aggregate and plot hourly variances (to investigate deltas/variability)
 
 
 
@@ -137,12 +128,7 @@ threshold.orange=1
 threshold.red=1.5
 plot.eventlab <- ggplot(df.eventlab, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)")+ geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
 
-plot.temperature <- ggplot(df.temperature, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)")
-plot.flow <- ggplot(df.flow, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)")
-plot.pressure <- ggplot(df.pressure, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)")
-plot.conductivity <- ggplot(df.conductivity, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)")
-plot.acidity <- ggplot(df.acidity, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)")
-plot.turbidity <- ggplot(df.turbidity, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
+plot.turbidity.means <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
 
 plot.eventlab + scale_y_log10()
 plot.temperature + scale_y_log10()    # Can be negative (linear scale?)
@@ -150,7 +136,7 @@ plot.flow + scale_y_log10()           # Can be negative (linear scale?)
 plot.pressure + scale_y_log10()
 plot.conductivity + scale_y_log10()
 plot.acidity + scale_y_log10()
-plot.turbidity + scale_y_log10()
+plot.turbidity.means + scale_y_log10()
 
 
 
