@@ -60,12 +60,10 @@ readfile <- function(file) {
     return(data[, c(1, 3, 2)])
 }
 
-# Read files and optionally aggregate. Option aggregate="no"|"hourlymean"|"hourlymax"
-readfiles <- function(fileslist, aggregate = "no") {
-    if (aggregate == "hourlymean") {
-        listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period="hour", method="mean"))
-    } else if (aggregate == "hourlymax") {
-        listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period="hour", method="max"))
+# Read files and optionally aggregate
+readfiles <- function(fileslist, aggregate.period="hour", aggregate.method="none") {
+    if (! aggregate.method == "none") {
+        listofdataframes <- lapply(fileslist, function(file) aggregatebytime(readfile(file), period=aggregate.period, method=aggregate.method))
     } else {
         listofdataframes <- lapply(fileslist, function(file) readfile(file))
     }
@@ -111,16 +109,16 @@ files.other <- Reduce(setdiff, list(files.all, files.eventlab, files.temperature
 
 # Note that we took hourly aggregates (less NAs, less peak events, smaller data sets, easier finding signals with small time lag)
 
-#df.eventlab <- readfiles(files.eventlab, aggregate="hourlymax")
-df.eventlab <- readfiles(files.eventlab[1:30], aggregate="hourlymax")
-df.temperature <- readfiles(files.temperature, aggregate="hourlymean")
-df.flow <- readfiles(files.flow, aggregate="hourlymean")
-df.pressure <- readfiles(files.pressure, aggregate="hourlymean")
-df.conductivity <- readfiles(files.conductivity, aggregate="hourlymean")
-df.acidity <- readfiles(files.acidity, aggregate="hourlymean")
-df.turbidity <- readfiles(files.turbidity, aggregate="hourlymean")
+#df.eventlab <- readfiles(files.eventlab, aggregate.period="hour", aggregate.method="max")
+df.eventlab <- readfiles(files.eventlab[1:30], aggregate.period="hour", aggregate.method="max")
+df.temperature <- readfiles(files.temperature, aggregate.period="hour", aggregate.method="mean")
+df.flow <- readfiles(files.flow, aggregate.period="hour", aggregate.method="mean")
+df.pressure <- readfiles(files.pressure, aggregate.period="hour", aggregate.method="mean")
+df.conductivity <- readfiles(files.conductivity, aggregate.period="hour", aggregate.method="mean")
+df.acidity <- readfiles(files.acidity, aggregate.period="hour", aggregate.method="mean")
+df.turbidity <- readfiles(files.turbidity, aggregate.period="hour", aggregate.method="mean")
 # Ignoring 'other' vars for now
-#df.other <- readfiles(files.other, aggregate="hourlymean")
+#df.other <- readfiles(files.other, aggregate.period="hour", aggregate.method="mean")
 
 # TODO: troubleshoot df.flow not found
 
