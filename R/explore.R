@@ -16,7 +16,7 @@ library(ggplot2)
 library(caret)
 library(GGally)     # for ggpairs
 library(Rmisc)
-library(gplots)     # for heatmap2
+library(gplots)     # for heatmap.2
 
 
 # Print session info
