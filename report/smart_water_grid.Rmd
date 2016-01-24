@@ -2,7 +2,7 @@
 title: "Correlating water quality fluctuations with sensor data"
 subtitle: "Vitens Open Data Challenge: Smart Water Grid"
 author: "Dennis van den Berg"
-date: "21/01/2016"
+date: "24/01/2016"
 output: html_document
 ---
 
@@ -200,9 +200,42 @@ heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
 
 ### Correlations
 
-(pair plots)
 
-(multiple variables in single plot)
+
+## Follow-up Actions
+
+Mention that Eventlab peaks justify hourly aggregations (mean, max, ..). Also causes less NAs, less peak events, smaller data set, easier finding signals with small time lag
+
+
+Data import & aggregation:
+
+1. Select time range during import (instead of after)
+1. Aggregate using hourly variance (to see fluctuations/deltas)
+1. Aggregate above threshold TRUE/FALSE (apply to Eventlab data)
+
+
+Summarizations & visualizations:
+
+1. Multivariate plots
+1. Optional tables, boxplots
+1. Pair plots
+1. Heatmaps (al least for eventlab, possibly for other categories)
+1. Dendrogram (related vars within categories)
+
+
+Machine Learning & Predictions:
+
+1. Select 1 response var
+1. Select 1 interesting dataset with predictors (for example turbidity)
+1. Select interesting time range (maybe not necessary)
+1. Merge predictor set and response var
+1. Remove rows with NA (consider these as clean datasets that we can work with)
+1. Split into train and test sets
+1. Apply ML algorithm (RF, GBM, Tree)
+1. Predict and validate
+1. Check list of important predictors
+
+
 
 ## Data Source
 
