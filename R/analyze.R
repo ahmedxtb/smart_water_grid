@@ -48,7 +48,7 @@ readfile <- function(file) {
     # Check for empty file
     if(nrow(data) != 0) {
         # Convert to POSIXct/POSIXt time format
-        data$Time <- ymd_hms(data$Time)
+        data$Time <- ymd_hms(data$Time, tz = "CET")
         
         # Add variablename as column
         data$Variable <- variablename
@@ -110,6 +110,13 @@ selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
     subset(dataframe, Time >= begintime & Time <= endtime)
 }
 
+wideformat <- function(df.timevariablevalue) {
+    # Melt 'Statistics' column
+    df.responsepredictors.molten <- melt(df.timevariablevalue, id.vars=c("Time", "Variable"), variable.name="Statistic", value.name="Value")
+    
+    # Cast
+    dcast(df.responsepredictors.molten, Time ~ Variable + Statistic, value.var="Value")
+}
 
 
 ## List files for each data category (eventlab, temperature, flow, etc)
@@ -140,7 +147,7 @@ df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="
 # Ignoring 'other' variables for now
 
 # # Write/read aggregated datasets to/from dir.cache
-# setwd(dir.cache)
+setwd(dir.cache)
 # save(df.eventlab.hourly, file="eventlab.hourly.Rdata")
 # save(df.temperature.hourly, file="temperature.hourly.Rdata")
 # save(df.flow.hourly, file="flow.hourly.Rdata")
@@ -148,21 +155,21 @@ df.turbidity.hourly <- readfilesandaggregate(files.turbidity, aggregate.period="
 # save(df.conductivity.hourly, file="conductivity.hourly.Rdata")
 # save(df.acidity.hourly, file="acidity.hourly.Rdata")
 # save(df.turbidity.hourly, file="turbidity.hourly.Rdata")
-# load(file="eventlab.hourly.Rdata")
-# load(file="temperature.hourly.Rdata")
-# load(file="flow.hourly.Rdata")
-# load(file="pressure.hourly.Rdata")
-# load(file="conductivity.hourly.Rdata")
-# load(file="acidity.hourly.Rdata")
-# load(file="turbidity.hourly.Rdata")
-# setwd(dir.data)
+load(file="eventlab.hourly.Rdata")
+load(file="temperature.hourly.Rdata")
+load(file="flow.hourly.Rdata")
+load(file="pressure.hourly.Rdata")
+load(file="conductivity.hourly.Rdata")
+load(file="acidity.hourly.Rdata")
+load(file="turbidity.hourly.Rdata")
+setwd(dir.data)
 
 
 
 ## Plot hourly maximums and variances for Eventlab data
 
-plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=Value.max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
-plot.eventlab.hourly.var <- ggplot(df.eventlab.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly variances)")
+plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
+plot.eventlab.hourly.var <- ggplot(df.eventlab.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly variances)")
 plot.eventlab.hourly.max + scale_y_log10()
 plot.eventlab.hourly.var
 
@@ -171,12 +178,12 @@ plot.eventlab.hourly.var
 ## Plot hourly means and variances for other variables
 
 # Hourly means
-plot.temperature.hourly.mean <- ggplot(df.temperature.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)")
-plot.flow.hourly.mean <- ggplot(df.flow.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)")
-plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)")
-plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)")
-plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)")
-plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
+plot.temperature.hourly.mean <- ggplot(df.temperature.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)")
+plot.flow.hourly.mean <- ggplot(df.flow.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)")
+plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)")
+plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)")
+plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)")
+plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
 
 plot.temperature.hourly.mean
 plot.flow.hourly.mean
@@ -186,12 +193,12 @@ plot.acidity.hourly.mean + scale_y_log10()
 plot.turbidity.hourly.mean + scale_y_log10()
 
 # Hourly vars (to investigate deltas/variability)
-plot.temperature.hourly.var <- ggplot(df.temperature.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Temperature (hourly vars)")
-plot.flow.hourly.var <- ggplot(df.flow.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Flow (hourly vars)")
-plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Pressure (hourly vars)")
-plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly vars)")
-plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly vars)")
-plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=Value.var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly vars)")
+plot.temperature.hourly.var <- ggplot(df.temperature.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Temperature (hourly vars)")
+plot.flow.hourly.var <- ggplot(df.flow.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Flow (hourly vars)")
+plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Pressure (hourly vars)")
+plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly vars)")
+plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly vars)")
+plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly vars)")
 
 plot.temperature.hourly.var + scale_y_log10()
 plot.flow.hourly.var + scale_y_log10()
@@ -205,12 +212,12 @@ plot.turbidity.hourly.var + scale_y_log10()
 ## Explore single Eventlab variable
 
 pattern.response="FR-MOBMS-vitnor1-meetwaarde"
-time.begin.1=ymd("2015-06-27")
-time.end.1=ymd("2015-07-04")
-time.begin.2=ymd_hms("2015-06-29T00:00:00")
-time.end.2=ymd_hms("2015-06-29T12:00:00")
-time.begin.3=ymd_hms("2015-06-29T02:00:00")
-time.end.3=ymd_hms("2015-06-29T03:00:00")
+time.begin.1=ymd("2015-06-27", tz = "CET")
+time.end.1=ymd("2015-07-04", tz = "CET")
+time.begin.2=ymd_hms("2015-06-29T00:00:00", tz = "CET")
+time.end.2=ymd_hms("2015-06-29T12:00:00", tz = "CET")
+time.begin.3=ymd_hms("2015-06-29T02:00:00", tz = "CET")
+time.end.3=ymd_hms("2015-06-29T03:00:00", tz = "CET")
 threshold.orange=1
 threshold.red=1.5
 files.response <- list.files(path=dir.data, pattern=pattern.response)
@@ -227,8 +234,8 @@ plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limit
 
 ## Investigate interesting time range with Eventlab peaks
 
-time.begin=ymd("2015-06-28")
-time.end=ymd("2015-07-04")
+time.begin=ymd("2015-06-28", tz = "CET")
+time.end=ymd("2015-07-04", tz = "CET")
 plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end)))
 plot.eventlab.hourly.max + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10()
 plot.turbidity.hourly.mean + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10() + geom_line()
@@ -240,13 +247,43 @@ plot.pressure.hourly.var + scale_x_datetime(limits = as.POSIXct(c(time.begin, ti
 
 
 
-## Correlate interesting variables
+## Correlate interesting variables (FR.MOBMS.vitnor1.meetwaarde_var with flow vars)
 
-df.response <- df.eventlab.hourly[df.eventlab.hourly$Variable=="FR.MOBMS.vitnor1.meetwaarde",]
-df.predict <- df.turbidity.hourly[df.turbidity.hourly$Variable=="FR.PNB_TR00QI02PV.meetwaarde",]
-df.responsepredict <- rbind(df.response, df.predict)
-# Melt first then cast
-df.responsepredict.cast <- dcast(melt(df.responsepredict, id.vars=c("Time", "Variable")), Time ~ Variable + variable)
+# Looking
+
+# Select single variable from specific Eventlab dataset as response
+df.response <- subset(df.eventlab.hourly, Variable=="FR.MOBMS.vitnor1.meetwaarde", select=c(Time, Variable, var))
+
+# Select dataset containing predictors
+df.predictors <- subset(df.flow.hourly, select=c(Time, Variable, var))
+
+# Merge vertically
+df.merged <- rbind(df.response, df.predictors)
+
+# Convert to wide format
+df.wide <- wideformat(df.merged)
+
+# Remove NAs
+#df.responsepredictors <- na.omit(df.responsepredictors.cast)
+
+
+## Correlate Eventlab hourly means
+drawheatmap <- function(dataframe) {
+    dataframe.wide <- wideformat(dataframe)
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=NA, na.color='Grey', scale="column", trace="none", margins=c(5,5))
+}
+
+selectedvariables <- levels(df.eventlab.hourly$Variable)[1:12]
+df.eventlab.selection <- subset(df.eventlab.hourly,
+                                Variable %in% selectedvariables &
+                                Time >= ymd_hms("2015-06-29T00:00:00", tz = "CET") & Time <= ymd_hms("2015-06-29T12:00:00", tz = "CET"),
+                                select=c(Time, Variable, var)
+                                )
+drawheatmap(df.eventlab.selection)
+
+df.eventlab.selection
+
 
 ## Heatmaps (at least for eventlab, possibly for other categories)
 
