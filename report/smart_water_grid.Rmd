@@ -84,7 +84,7 @@ aggregatebytime <- function(dataframe, period="hours") {
 
     # Checks
     if (nrow(na.omit(dataframe)) == 0) {
-        return(dataframe)
+        return(na.omit(dataframe))
     }
      if (! period %in% allowedperiods) {
          warning(paste("Invalid period option ", "'", period, "'", sep=""))         
@@ -96,11 +96,12 @@ aggregatebytime <- function(dataframe, period="hours") {
      }
     
     # Aggregate and convert to proper data frame
-    as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
-}
-
-selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
-    subset(dataframe, Time >= begintime & Time <= endtime)
+    newdataframe <- as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
+    
+    # Give proper variable name
+    names(newdataframe) <- gsub("Value.", "", names(newdataframe))
+    
+    return(newdataframe)
 }
 ```
 
@@ -192,8 +193,8 @@ We decided not to focus on the 'other' variable for now, as we have limited back
 
 ```{r, echo=FALSE}
 pattern.response="FR-MOBMS-vitnor1-meetwaarde"
-time.begin.1=ymd("2015-06-25")
-time.end.1=ymd("2015-07-05")
+time.begin.1=ymd("2015-06-27")
+time.end.1=ymd("2015-07-04")
 time.begin.2=ymd_hms("2015-06-29T00:00:00")
 time.end.2=ymd_hms("2015-06-29T12:00:00")
 time.begin.3=ymd_hms("2015-06-29T02:00:00")
@@ -348,9 +349,9 @@ Machine Learning & Predictions:
 
 1. Select 1 response var
 1. Select 1 interesting dataset with predictors (for example turbidity)
-1. Select interesting time range (maybe not necessary)
-1. Merge predictor set and response var
-1. Remove rows with NA (consider these as clean datasets that we can work with)
+1. Select interesting time range (optional)
+1. Merge predictor set and response var (and remove NA): Melt > select variance > cast > merge > omit.na
+
 1. Split into train and test sets
 1. Apply ML algorithm (RF, GBM, Tree model)
 1. Predict and validate
