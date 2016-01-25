@@ -86,7 +86,7 @@ aggregatebytime <- function(dataframe, period="hours") {
 
     # Checks
     if (nrow(na.omit(dataframe)) == 0) {
-        return(dataframe)
+        return(na.omit(dataframe))
     }
      if (! period %in% allowedperiods) {
          warning(paste("Invalid period option ", "'", period, "'", sep=""))         
@@ -98,7 +98,12 @@ aggregatebytime <- function(dataframe, period="hours") {
      }
     
     # Aggregate and convert to proper data frame
-    as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
+    newdataframe <- as.data.frame(as.list(aggregate(Value ~ Time + Variable, dataframe, FUN=statistics)))
+    
+    # Give proper variable name
+    names(newdataframe) <- gsub("Value.", "", names(newdataframe))
+    
+    return(newdataframe)
 }
 
 selecttimerange <- function(dataframe, begintime = -Inf, endtime = Inf) {
@@ -200,8 +205,8 @@ plot.turbidity.hourly.var + scale_y_log10()
 ## Explore single Eventlab variable
 
 pattern.response="FR-MOBMS-vitnor1-meetwaarde"
-time.begin.1=ymd("2015-06-25")
-time.end.1=ymd("2015-07-05")
+time.begin.1=ymd("2015-06-27")
+time.end.1=ymd("2015-07-04")
 time.begin.2=ymd_hms("2015-06-29T00:00:00")
 time.end.2=ymd_hms("2015-06-29T12:00:00")
 time.begin.3=ymd_hms("2015-06-29T02:00:00")
@@ -219,6 +224,29 @@ plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits 
 plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
 
 
+
+## Investigate interesting time range with Eventlab peaks
+
+time.begin=ymd("2015-06-28")
+time.end=ymd("2015-07-04")
+plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end)))
+plot.eventlab.hourly.max + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10()
+plot.turbidity.hourly.mean + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10() + geom_line()
+#plot.turbidity.hourly.var + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10() + geom_line()
+#plot.acidity.hourly.mean + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10() + geom_line()
+plot.conductivity.hourly.var + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10() + geom_line()
+plot.pressure.hourly.var + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10()
+#plot.temperature.hourly.var + scale_x_datetime(limits = as.POSIXct(c(time.begin, time.end))) + scale_y_log10()
+
+
+
+## Correlate interesting variables
+
+df.response <- df.eventlab.hourly[df.eventlab.hourly$Variable=="FR.MOBMS.vitnor1.meetwaarde",]
+df.predict <- df.turbidity.hourly[df.turbidity.hourly$Variable=="FR.PNB_TR00QI02PV.meetwaarde",]
+df.responsepredict <- rbind(df.response, df.predict)
+# Melt first then cast
+df.responsepredict.cast <- dcast(melt(df.responsepredict, id.vars=c("Time", "Variable")), Time ~ Variable + variable)
 
 ## Heatmaps (at least for eventlab, possibly for other categories)
 
