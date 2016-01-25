@@ -115,6 +115,13 @@ wideformat <- function(df.timevariablevalue) {
     # Cast
     dcast(df.responsepredictors.molten, Time ~ Variable + Statistic, value.var="Value")
 }
+
+drawheatmap <- function(dataframe) {
+    dataframe.wide <- wideformat(dataframe)
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+    heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=NA, na.color='Grey', scale="column", trace="none", margins=c(5,5))
+}
 ```
 
 

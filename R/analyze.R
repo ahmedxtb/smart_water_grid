@@ -118,6 +118,21 @@ wideformat <- function(df.timevariablevalue) {
     dcast(df.responsepredictors.molten, Time ~ Variable + Statistic, value.var="Value")
 }
 
+drawheatmap <- function(dataframe) {
+    dataframe.wide <- wideformat(dataframe)
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+    heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=NA, na.color='Grey', scale="column", trace="none", margins=c(5,5))
+}
+
+drawheatmapwithdendrogram <- function(dataframe) {
+    dataframe.wide <- wideformat(dataframe)
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+    heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=TRUE, na.color='Grey', scale="column", trace="none", margins=c(5,5))
+}
+
+
 
 ## List files for each data category (eventlab, temperature, flow, etc)
 
@@ -247,9 +262,27 @@ plot.pressure.hourly.var + scale_x_datetime(limits = as.POSIXct(c(time.begin, ti
 
 
 
-## Correlate interesting variables (FR.MOBMS.vitnor1.meetwaarde_var with flow vars)
+## Correlate Eventlab hourly max (Heatmap with certain time period)
 
-# Looking
+selectedvariables <- levels(df.eventlab.hourly$Variable)
+df.eventlab.selection <- subset(df.eventlab.hourly,
+                                Variable %in% selectedvariables &
+                                Time >= ymd_hms("2015-06-01T00:00:00", tz = "CET") & Time <= ymd_hms("2015-07-04T12:00:00", tz = "CET"),
+                                select=c(Time, Variable, max)
+)
+
+# Calculate alarm if max > 1
+df.eventlab.selection$alarm <- 1 * (df.eventlab.selection$max > 1.5)
+df.eventlab.selection <- subset(df.eventlab.selection, select=-max)
+
+#drawheatmap(df.eventlab.selection)
+drawheatmapwithdendrogram(df.eventlab.selection)
+# Might give us ideas about which Eventlab sensor alarms are related
+
+
+
+
+## Correlate interesting variables (FR.MOBMS.vitnor1.meetwaarde_var with flow vars)
 
 # Select single variable from specific Eventlab dataset as response
 df.response <- subset(df.eventlab.hourly, Variable=="FR.MOBMS.vitnor1.meetwaarde", select=c(Time, Variable, var))
@@ -260,40 +293,7 @@ df.predictors <- subset(df.flow.hourly, select=c(Time, Variable, var))
 # Merge vertically
 df.merged <- rbind(df.response, df.predictors)
 
-# Convert to wide format
-df.wide <- wideformat(df.merged)
 
-# Remove NAs
-#df.responsepredictors <- na.omit(df.responsepredictors.cast)
-
-
-## Correlate Eventlab hourly means
-drawheatmap <- function(dataframe) {
-    dataframe.wide <- wideformat(dataframe)
-    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
-    heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=NA, na.color='Grey', scale="column", trace="none", margins=c(5,5))
-}
-
-selectedvariables <- levels(df.eventlab.hourly$Variable)[1:12]
-df.eventlab.selection <- subset(df.eventlab.hourly,
-                                Variable %in% selectedvariables &
-                                Time >= ymd_hms("2015-06-29T00:00:00", tz = "CET") & Time <= ymd_hms("2015-06-29T12:00:00", tz = "CET"),
-                                select=c(Time, Variable, var)
-                                )
-drawheatmap(df.eventlab.selection)
-
-df.eventlab.selection
-
-
-## Heatmaps (at least for eventlab, possibly for other categories)
-
-# heatmap.abovethreshold <- function(eventlab.dataframe, threshold=1) {
-#     # Drop first column (Time), convert to 1 if above threshold and 0 if not, convert to matrix
-#     eventlab.alarms <- as.matrix(1 * (eventlab.dataframe[, -1] > threshold))
-#     
-#     # Draw heatmap
-#     heatmap.2(eventlab.alarms, Rowv=NA, Colv=NA, col = c('Green', 'Red'), na.color='Grey', scale="column", trace="none", margins=c(5,0))
-# }
 
 
 ## Dendrogram (related variables within categories)
