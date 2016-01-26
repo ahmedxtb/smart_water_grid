@@ -293,10 +293,10 @@ df.predictors <- subset(df.flow.hourly, select=c(Time, Variable, var))
 # Merge vertically
 df.merged <- rbind(df.response, df.predictors)
 
+# Correlation plot 
 
+# Dendrogram
 
-
-## Dendrogram (related variables within categories)
 
 
 

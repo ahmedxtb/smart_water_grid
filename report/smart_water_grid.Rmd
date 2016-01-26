@@ -46,7 +46,7 @@ readfile <- function(file) {
     # Check for empty file
     if(nrow(data) != 0) {
         # Convert to POSIXct/POSIXt time format
-        data$Time <- ymd_hms(data$Time, tz = "UTC")
+        data$Time <- ymd_hms(data$Time, tz = "CET")
         
         # Add variablename as column
         data$Variable <- variablename
@@ -121,6 +121,13 @@ drawheatmap <- function(dataframe) {
     matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
     rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
     heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=NA, na.color='Grey', scale="column", trace="none", margins=c(5,5))
+}
+
+drawheatmapwithdendrogram <- function(dataframe) {
+    dataframe.wide <- wideformat(dataframe)
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+    heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=TRUE, na.color='Grey', scale="column", trace="none", margins=c(5,5))
 }
 ```
 
