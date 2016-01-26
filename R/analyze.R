@@ -35,8 +35,8 @@ setwd(dir.data)
 ## FUNCTIONS
 
 createvariablefromfilename <- function(filename) {
-    # Chop off beginning and end of filename and convert to valid variable name
-    variablename <- make.names(gsub("(^Dump_|.csv$)", "", filename))
+    # Remove Dump/meetwaarde/csv parts of filename and convert to valid variable name
+    make.names(gsub("(^Dump_|.csv$)", "", gsub("(.|-|_)(m|M)eetwaarde", "", filename)))
 }
 
 readfile <- function(file) {
@@ -226,7 +226,7 @@ plot.turbidity.hourly.var + scale_y_log10()
 
 ## Explore single Eventlab variable
 
-pattern.response="FR-MOBMS-vitnor1-meetwaarde"
+pattern.response="FR-MOBMS-vitnor1"
 time.begin.1=ymd("2015-06-27", tz = "CET")
 time.end.1=ymd("2015-07-04", tz = "CET")
 time.begin.2=ymd_hms("2015-06-29T00:00:00", tz = "CET")
@@ -282,10 +282,10 @@ drawheatmapwithdendrogram(df.eventlab.selection)
 
 
 
-## Correlate interesting variables (FR.MOBMS.vitnor1.meetwaarde_var with flow vars)
+## Correlate interesting variables (FR.MOBMS.vitnor1_var with flow vars)
 
 # Select single variable from specific Eventlab dataset as response
-df.response <- subset(df.eventlab.hourly, Variable=="FR.MOBMS.vitnor1.meetwaarde", select=c(Time, Variable, var))
+df.response <- subset(df.eventlab.hourly, Variable=="FR.MOBMS.vitnor1", select=c(Time, Variable, var))
 
 # Select dataset containing predictors
 df.predictors <- subset(df.flow.hourly, select=c(Time, Variable, var))

@@ -35,8 +35,8 @@ dir.cache <- "~/git/smart_water_grid/cache"
 setwd(dir.data)
 
 createvariablefromfilename <- function(filename) {
-    # Chop off beginning and end of filename and convert to valid variable name
-    variablename <- make.names(gsub("(^Dump_|.csv$)", "", filename))
+    # Remove Dump/meetwaarde/csv parts of filename and convert to valid variable name
+    make.names(gsub("(^Dump_|.csv$)", "", gsub("(.|-|_)(m|M)eetwaarde", "", filename)))
 }
 
 readfile <- function(file) {
@@ -220,7 +220,7 @@ We decided not to focus on the 'other' variable for now, as we have limited back
 ### Zooming in on Eventlab data
 
 ```{r, echo=FALSE}
-pattern.response="FR-MOBMS-vitnor1-meetwaarde"
+pattern.response="FR-MOBMS-vitnor1"
 time.begin.1=ymd("2015-06-27", tz = "UTC")
 time.end.1=ymd("2015-07-04", tz = "UTC")
 time.begin.2=ymd_hms("2015-06-29T00:00:00", tz = "UTC")
@@ -251,7 +251,21 @@ plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limit
 
 ### Aggregate data per hour
 
+Some challenges
+
+* Data set: measuring frequency differs per data set, blocks of missing data, string values in numeric variables
+* Lot of data, many response variables, many potential predictors
+* Potential time lags in correlation
+
+Potential solutions
+
+* Subsetting by selecting variables and time range
+* Aggregated statistics per hour: looking at mean, variance, max and a binary statistic that determines whether max > threshold
+
 We decided to aggregate hourly data (mean, var, min, max of hour blocks) in order to compress our data set, to reduce the chances of different variables both having a value for a given time, to aggregate the number of peak events (in Eventlab measurements; only 1 per hour now) and also to increase our chances of finding correlated signals in which a small time lag between variables is present (hour time scale).
+
+
+
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 # df.eventlab.hourly <- readfilesandaggregate(files.eventlab, aggregate.period="hours")
