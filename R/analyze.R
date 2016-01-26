@@ -299,22 +299,9 @@ df.merged <- rbind(df.response, df.predictors)
 
 
 
+## Machine Learning
 
-## Select 1 response var
-
-## Select 1 interesting dataset with predictors (for example turbidity)
-
-## Select interesting time range (maybe not necessary)
-
-## Merge predictor set and response var
-
-## Remove rows with NA (consider these as clean datasets that we can work with)
-
-
-## Split into train and test sets
-
-## Apply ML algorithm (RF, GBM, Tree)
-
-## Predict and validate
-
-## Check list of important predictors
+# * Split dataset into training and test sets
+# * Apply ML algorithm (RF, GBM, Tree model?)
+# * Predict and validate
+# * We are intested in list of most important predictors
