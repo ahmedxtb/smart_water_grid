@@ -14,7 +14,6 @@ library(reshape2)
 library(lubridate)
 library(ggplot2)
 library(caret)
-library(GGally)     # for ggpairs
 library(Rmisc)
 library(gplots)     # for heatmap.2
 
@@ -183,8 +182,8 @@ setwd(dir.data)
 
 ## Plot hourly maximums and variances for Eventlab data
 
-plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
-plot.eventlab.hourly.var <- ggplot(df.eventlab.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly variances)")
+plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + guides(col=guide_legend(ncol=1)) + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
+plot.eventlab.hourly.var <- ggplot(df.eventlab.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly variances)") + guides(col=guide_legend(ncol=1))
 plot.eventlab.hourly.max + scale_y_log10()
 plot.eventlab.hourly.var
 
@@ -193,12 +192,12 @@ plot.eventlab.hourly.var
 ## Plot hourly means and variances for other variables
 
 # Hourly means
-plot.temperature.hourly.mean <- ggplot(df.temperature.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)")
-plot.flow.hourly.mean <- ggplot(df.flow.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)")
-plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)")
-plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)")
-plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)")
-plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)")
+plot.temperature.hourly.mean <- ggplot(df.temperature.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Temperature (hourly means)") + guides(col=guide_legend(ncol=1))
+plot.flow.hourly.mean <- ggplot(df.flow.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Flow (hourly means)") + guides(col=guide_legend(ncol=1))
+plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Pressure (hourly means)") + guides(col=guide_legend(ncol=1))
+plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)") + guides(col=guide_legend(ncol=1))
+plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)") + guides(col=guide_legend(ncol=1))
+plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)") + guides(col=guide_legend(ncol=1))
 
 plot.temperature.hourly.mean
 plot.flow.hourly.mean
@@ -208,12 +207,12 @@ plot.acidity.hourly.mean + scale_y_log10()
 plot.turbidity.hourly.mean + scale_y_log10()
 
 # Hourly vars (to investigate deltas/variability)
-plot.temperature.hourly.var <- ggplot(df.temperature.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Temperature (hourly vars)")
-plot.flow.hourly.var <- ggplot(df.flow.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Flow (hourly vars)")
-plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Pressure (hourly vars)")
-plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly vars)")
-plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly vars)")
-plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly vars)")
+plot.temperature.hourly.var <- ggplot(df.temperature.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Temperature (hourly vars)") + guides(col=guide_legend(ncol=1))
+plot.flow.hourly.var <- ggplot(df.flow.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Flow (hourly vars)") + guides(col=guide_legend(ncol=1))
+plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Pressure (hourly vars)") + guides(col=guide_legend(ncol=1))
+plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly vars)") + guides(col=guide_legend(ncol=1))
+plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly vars)") + guides(col=guide_legend(ncol=1))
+plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly vars)") + guides(col=guide_legend(ncol=1))
 
 plot.temperature.hourly.var + scale_y_log10()
 plot.flow.hourly.var + scale_y_log10()
@@ -240,7 +239,7 @@ variables.response <- createvariablefromfilename(files.response)
 
 setwd(dir.data)
 df.eventlab.response <- readfilesraw(files.response)
-plot.response <- ggplot(df.eventlab.response, aes(x=Time, y=Value)) + geom_point() + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
+plot.response <- ggplot(df.eventlab.response, aes(x=Time, y=Value)) + geom_point() + guides(col=guide_legend(ncol=1)) + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red")
 plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.1, time.end.1)))
 plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.2, time.end.2)))
 plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
