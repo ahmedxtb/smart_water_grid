@@ -15,6 +15,8 @@ Central question: What are the correlations between changes in water quality mea
 
 See documentation: https://github.com/dljvandenberg/smart_water_grid/blob/master/doc/Vitens%20Data%20Challenge%2007122015.pdf
 
+Note that in this report we denote the measured quantity with 'Variable'.
+
 
 ## Data Description
 
@@ -339,6 +341,27 @@ plot.turbidity.hourly.var + scale_y_log10()
 
 ### Heatmaps of Eventlab alarm events
 
+
+Relation between different Eventlab alarm events (within certain time period)
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
+
+selectedvariables <- levels(df.eventlab.hourly$Variable)
+df.eventlab.selection <- subset(df.eventlab.hourly,
+                                Variable %in% selectedvariables &
+                                Time >= ymd_hms("2015-06-01T00:00:00", tz = "CET") & Time <= ymd_hms("2015-07-04T12:00:00", tz = "CET"),
+                                select=c(Time, Variable, max)
+)
+
+# Calculate alarm if max > 1
+df.eventlab.selection$alarm <- 1 * (df.eventlab.selection$max > 1)
+df.eventlab.selection <- subset(df.eventlab.selection, select=-max)
+
+#drawheatmap(df.eventlab.selection)
+drawheatmapwithdendrogram(df.eventlab.selection)
+# Might give us ideas about which Eventlab sensor alarms are related
+```
+
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 # Select subset of vitnor variables, read data for specific time range and plot heatmap
 setwd(dir.data)
@@ -358,33 +381,37 @@ data.eventlab.timerange <- selecttimerange(data.eventlab, time.begin, time.end)
 
 ## Further Research
 
-Data import & aggregation:
+#### Additional methods
 
-1. Aggregate above threshold TRUE/FALSE (apply to Eventlab data)
+1. **Clustering** of variables (exploratory)
+    * Mostly useful to investigate which variables are closely related
+    * But works best *within* datasets of similar measured quantities (such as *only* flow data or pressure data)
+1. **Regression Analysis**
+    * Complicated because of lack of domain knowledge (risk of including theoretically unrelated regressors, etc)
+1. **Machine Learning**:
+    * Specify *categorization problem* in which the Eventlab variable has 2 status levels 'normal'/'alarm' if below/above threshold (or even better: 'green'/'orange'/'red')
+    * Split dataset into training and test sets
+    * Apply ML algorithm (Random Forest, Boosting?)
+    * Predict and validate
+    * We are intested in list of most important predictors!
 
 
-Summarizations & visualizations:
+#### Improved subsetting and aggregation
 
-1. Multivariate plots -> focus on interesting time range
-1. Pair plots
-1. Heatmaps (al least for eventlab, possibly for other categories)
-1. Dendrogram (related vars within categories)
+* **Extend time period**: larger data subsets to train more accurate models
+* **Different response variables**: instead of the specific one we focused on right now
+* **More measured quantities**: for example include 'other' variables (more domain knowledge needed?)
+* **Smaller/larger aggregation time windows**: or don't aggregate at all
+* **Aggregate different statistics**: now we determined mean, variance, minimum, maximum, anyabovethreshold per aggregation time window
+* **Correlate different statistics combinations**: for example look at correlation of hourly max for Eventlab with hourly min of pressure)
 
 
-Machine Learning & Predictions:
+#### Incorporate domain knowledge
 
-1. Select 1 response var
-1. Select 1 interesting dataset with predictors (for example turbidity)
-1. Select interesting time range (optional)
-1. Merge predictor set and response var (and remove NA): Melt > select variance > cast > merge > omit.na
-
-1. Split into train and test sets
-1. Apply ML algorithm (RF, GBM, Tree model)
-1. Predict and validate
-1. Check list of important predictors
+Last but not least: it's safe to say that including more domain knowledge about **measured quantities** and **how they were gathered** may make it substantially easier to focus on more effective approaches and to draw meaningful conclusions.
 
 
 
 ## Data Source
 
-The set of raw data was provided by Vitens.
+Data set provided by Vitens.
