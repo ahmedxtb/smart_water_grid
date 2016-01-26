@@ -165,7 +165,7 @@ ggplot(data.select, aes(x=Time, y=Value, color=Variable)) + geom_point() + ggtit
 The frequency of data logging is 1 measurement per minute at most, though certainly not for all variables.
 
 
-### Variable overview
+### Measured Quantities
 
 In the documentation we see the following explanation of variable names:
 
@@ -198,7 +198,7 @@ We are interested in Eventlab measurements (variable names `*vitnor*`) as **resp
 
 * There are `r length(files.eventlab)` variables for Eventlab measurements
 * These represent `r length(files.eventlab)/3` Eventlab sensors, each of which produce a set of three variables (`*vitnor1*`, `*vitnor2*` and `*vitnor3*`)
-* Specifically, we are interested in events with values above a threshold for these variables (>1).
+* Specifically, we are interested in events with values above a threshold for these variables (>1 or >1.5) or with high fluctuations in a short time frame (variance).
 
 That leaves `r length(files.all)-length(files.eventlab)` variables that we can use as **potential predictors**:
 
@@ -212,7 +212,7 @@ That leaves `r length(files.all)-length(files.eventlab)` variables that we can u
 
 The data quality of these variables varies. Some files do not even contain any data points.
 
-We decided not to focus on the 'other' variable for now, as we have limited background of their meaning.
+We decided not to focus on the 'other' variable for now, especially since we have limited background of their meaning.
 
 
 ## Exploratory Analysis
@@ -242,14 +242,14 @@ plot.response <- ggplot(df.eventlab.response, aes(x=Time, y=Value)) + geom_point
 plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.1, time.end.1)))
 plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.2, time.end.2)))
 ```
-Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the vitnor values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour:
+Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the Eventlab values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour:
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
 ```
 
 
 
-### Aggregate data per hour
+## Challenges, methods and assumptions
 
 Some challenges
 
@@ -264,7 +264,9 @@ Potential solutions
 
 We decided to aggregate hourly data (mean, var, min, max of hour blocks) in order to compress our data set, to reduce the chances of different variables both having a value for a given time, to aggregate the number of peak events (in Eventlab measurements; only 1 per hour now) and also to increase our chances of finding correlated signals in which a small time lag between variables is present (hour time scale).
 
+Some assumptions
 
+We try to find relationships between measured quantities by looking at correlations of their aggregated statistics. For example: Since we are interested in changes (deltas), one approach would be to correlate Eventlab hourly variance with hourly variance in flow measurements.
 
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
@@ -297,7 +299,7 @@ setwd(dir.data)
 ```
 
 
-### Hourly maximums for Eventlab data
+### Eventlab hourly maximums and variances
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.eventlab.hourly.max <- ggplot(df.eventlab.hourly, aes(x=Time, y=max, color=Variable)) + geom_point() + ggtitle("Eventlab measurements (hourly max)") + geom_hline(yintercept=1, color="orange") + geom_hline(yintercept=1.5, color="red")
@@ -391,6 +393,13 @@ data.eventlab.timerange <- selecttimerange(data.eventlab, time.begin, time.end)
 
 ### Correlations
 
+
+## Preliminary Conclusions
+
+* We gained insight into measurement ranges and variability of Eventlab data, temperature, pressure, conductivity, acidity and turbidity data
+* Eventlab values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour
+
+* Possible correlations ..
 
 
 ## Further Research
