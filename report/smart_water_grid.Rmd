@@ -13,6 +13,8 @@ output:
 
 For the Vitens Open Data Challenge we analysed sensor data measured by the Smart Water Grid sensors that Vitens employs to monitor its network of drinking water pipes and conduits. Its central question: What are the correlations between changes in water quality measued by Eventlab sensors and other real-time measurements, statuses and alarm values? As a first step in our analysis we present the results of our exploratory analysis in this report.
 
+Our most important result so far is that the variance of one of the turbidity variables (FR-PTW_TR01QI02PV) correlates strongly (negatively) and significantly (p<0.05) with the variance in two of the Eventlab variables (FR-MOALD-vitnor1 and FR-MOALD-vitnor3).
+
 Additional documentation can be viewed here: http://bit.ly/1PBn7h2
 
 
@@ -20,13 +22,15 @@ Additional documentation can be viewed here: http://bit.ly/1PBn7h2
 ## Data Description
 
 ```{r, warning=FALSE, message=FALSE, message=FALSE, echo=FALSE}
-library(dplyr)
-library(reshape2)
-library(lubridate)
-library(ggplot2)
-library(caret)
-library(Rmisc)
-library(gplots)     # for heatmap.2
+library(dplyr, quiet=TRUE)
+library(reshape2, quiet=TRUE)
+library(lubridate, quiet=TRUE)
+library(ggplot2, quiet=TRUE)
+library(caret, quiet=TRUE)
+library(Rmisc, quiet=TRUE)
+library(gplots, quiet=TRUE)       # for heatmap.2
+library(corrplot, quiet=TRUE)
+library(Hmisc, quiet=TRUE)        # for rcorr
 
 dir.data <- "~/git/smart_water_grid/data"
 dir.cache <- "~/git/smart_water_grid/cache"
@@ -129,6 +133,29 @@ drawheatmapwithdendrogram <- function(dataframe) {
     rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
     heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=TRUE, na.color='Grey', scale="column", trace="none", margins=c(5,5))
 }
+
+plotcorrelations <- function(dataframe, begintime=-Inf, endtime=Inf) {
+    # Merge vertically, select time range, convert to wideformat
+    dataframe.wide <- wideformat(selecttimerange(dataframe, begintime, endtime))
+    
+    # Drop Time column, convert to matrix and set rownames to Time column
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+    
+    # Calculate correlation matrix
+    Mcorr <- rcorr(matrixwithouttimecolumn)
+    Mcorr$r[is.na(Mcorr$r)] <- 0
+    
+    # Plot correlations
+    corrplot(Mcorr$r[], order="original", diag=FALSE, p.mat=Mcorr$P, sig.level=0.05, insig="blank")
+}
+
+# matrixwithouttime <- function(dataframe) {
+#     dataframe.wide <- wideformat(dataframe)
+#     matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+#     rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+#     return(matrixwithouttimecolumn)
+# }
 ```
 
 
@@ -355,7 +382,6 @@ plot.turbidity.hourly.var + scale_y_log10()
 Relation between different Eventlab alarm events (within certain time period)
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
-
 selectedvariables <- levels(df.eventlab.hourly$Variable)
 df.eventlab.selection <- subset(df.eventlab.hourly,
                                 Variable %in% selectedvariables &
@@ -376,13 +402,56 @@ drawheatmapwithdendrogram(df.eventlab.selection)
 
 ### Correlations
 
+```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
+# Select subsets and time ranges
+begintime <- ymd("2015-06-01", tz = "CET")
+endtime <- ymd("2015-06-30", tz = "CET")
+df1 <- subset(df.eventlab.hourly, Variable %in% levels(df.eventlab.hourly$Variable)[1:20], select=c(Time, Variable, var))
+df2 <- subset(df.flow.hourly, Variable %in% levels(df.flow.hourly$Variable)[1:40], select=c(Time, Variable, var))
+df3 <- subset(df.pressure.hourly, Variable %in% levels(df.pressure.hourly$Variable)[1:40], select=c(Time, Variable, var))
+df4 <- subset(df.acidity.hourly, select=c(Time, Variable, var))
+df5 <- subset(df.turbidity.hourly, select=c(Time, Variable, var))
+df6 <- subset(df.conductivity.hourly, select=c(Time, Variable, var))
+df7 <- subset(df.temperature.hourly, Variable %in% levels(df.temperature.hourly$Variable)[1:40], select=c(Time, Variable, var))
+```
+
+Correlate Eventlab with flow variances
+
+```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
+# Plot correlations
+plotcorrelations(rbind(df1, df2), begintime, endtime)
+```
+
+Correlate Eventlab with pressure variances
+
+```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
+plotcorrelations(rbind(df1, df2, df3), begintime, endtime)
+```
+
+Correlate Eventlab, acidity, turbidity, conductivity variances
+
+```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
+plotcorrelations(rbind(df1, df4, df5, df6), begintime, endtime)
+```
+
+We observe that one of the turbidity variables correlates strongly with two of the Eventlab variables!
+
+
+
+```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
+#Correlate Eventlab with temperature variances
+#plotcorrelations(rbind(df1, df7), begintime, endtime)
+```
+
 
 ## Preliminary Conclusions
 
 * We gained insight into measurement ranges and variability of Eventlab data, temperature, pressure, conductivity, acidity and turbidity data
 * Eventlab values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour
+* We observe that the variance of one of the turbidity variables (FR-PTW_TR01QI02PV) correlates strongly (negatively) and significantly (p<0.05) with the variance in two of the Eventlab variables (FR-MOALD-vitnor1 and FR-MOALD-vitnor3)
+* We got a hint of other quantities that might be related by plotting some of the correlations of their hourly variances. More research is needed for this.
 
-* Possible correlations ..
+
 
 
 ## Further Research

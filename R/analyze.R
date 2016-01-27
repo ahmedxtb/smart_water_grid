@@ -9,13 +9,16 @@
 ## PREPARE
 
 # Libraries
-library(dplyr)
-library(reshape2)
-library(lubridate)
-library(ggplot2)
-library(caret)
-library(Rmisc)
-library(gplots)     # for heatmap.2
+library(dplyr, quiet=TRUE)
+library(reshape2, quiet=TRUE)
+library(lubridate, quiet=TRUE)
+library(ggplot2, quiet=TRUE)
+library(caret, quiet=TRUE)
+library(Rmisc, quiet=TRUE)
+library(gplots, quiet=TRUE)       # for heatmap.2
+library(corrplot, quiet=TRUE)
+library(Hmisc, quiet=TRUE)        # for rcorr
+
 
 # Print session info
 sessionInfo()
@@ -130,6 +133,30 @@ drawheatmapwithdendrogram <- function(dataframe) {
     rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
     heatmap.2(matrixwithouttimecolumn, Rowv=NA, Colv=TRUE, na.color='Grey', scale="column", trace="none", margins=c(5,5))
 }
+
+plotcorrelations <- function(dataframe, begintime=-Inf, endtime=Inf) {
+    # Merge vertically, select time range, convert to wideformat
+    dataframe.wide <- wideformat(selecttimerange(dataframe, begintime, endtime))
+    
+    # Drop Time column, convert to matrix and set rownames to Time column
+    matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+    rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+    
+    # Calculate correlation matrix
+    Mcorr <- rcorr(matrixwithouttimecolumn)
+    Mcorr$r[is.na(Mcorr$r)] <- 0
+    
+    # Plot correlations
+    corrplot(Mcorr$r[], order="original", diag=FALSE, p.mat=Mcorr$P, sig.level=0.05, insig="blank")
+}
+
+
+# matrixwithouttime <- function(dataframe) {
+#     dataframe.wide <- wideformat(dataframe)
+#     matrixwithouttimecolumn <- as.matrix(subset(dataframe.wide, select=-Time))
+#     rownames(matrixwithouttimecolumn) <- as.character(dataframe.wide$Time)
+#     return(matrixwithouttimecolumn)
+# }
 
 
 
@@ -283,19 +310,26 @@ drawheatmapwithdendrogram(df.eventlab.selection)
 
 ## Correlate interesting variables (FR.MOBMS.vitnor1_var with flow vars)
 
-# Select single variable from specific Eventlab dataset as response
-df.response <- subset(df.eventlab.hourly, Variable=="FR.MOBMS.vitnor1", select=c(Time, Variable, var))
+# Select subsets and time ranges
+df1 <- subset(df.eventlab.hourly, Variable %in% levels(df.eventlab.hourly$Variable)[1:20], select=c(Time, Variable, var))
+df2 <- subset(df.flow.hourly, Variable %in% levels(df.flow.hourly$Variable)[1:40], select=c(Time, Variable, var))
+begintime <- ymd("2015-06-01", tz = "CET")
+endtime <- ymd("2015-06-30", tz = "CET")
 
-# Select dataset containing predictors
-df.predictors <- subset(df.flow.hourly, select=c(Time, Variable, var))
+# Plot correlations
+plotcorrelations(df1, df2, begintime, endtime)
 
-# Merge vertically
-df.merged <- rbind(df.response, df.predictors)
 
-# Correlation plot 
 
+
+# Pair plots
+#plot(df.responsepredictors.wide)
+#pairs(df.responsepredictors.wide)
+#ggpairs(df.responsepredictors.wide)
+
+     
 # Dendrogram
-
+#drawheatmapwithdendrogram(df.responsepredictors)
 
 
 ## Machine Learning
