@@ -235,11 +235,9 @@ df.eventlab.response <- readfilesraw(files.response)
 plot.response <- ggplot(df.eventlab.response, aes(x=Time, y=Value)) + geom_point() + geom_hline(yintercept=threshold.orange, color="orange") + geom_hline(yintercept=threshold.red, color="red") + guides(col=guide_legend(ncol=1))
 plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.1, time.end.1)))
 plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.2, time.end.2)))
-```
-Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the Eventlab values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour:
-```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
 ```
+Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the Eventlab values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour.
 
 
 
@@ -374,17 +372,6 @@ drawheatmapwithdendrogram(df.eventlab.selection)
 # Might give us ideas about which Eventlab sensor alarms are related
 ```
 
-```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
-# Select subset of vitnor variables, read data for specific time range and plot heatmap
-setwd(dir.data)
-pattern.eventlab="FR-MOBMS-vitnor"
-files.eventlab <- list.files(path=dir.data, pattern=pattern.eventlab)
-data.eventlab <- readfilesraw(files.eventlab)
-time.begin=ymd_hms("2015-05-20T00:00:00", tz = "CET")
-time.end=ymd_hms("2015-06-30T00:00:00", tz = "CET")
-data.eventlab.timerange <- selecttimerange(data.eventlab, time.begin, time.end)
-#heatmap.abovethreshold(data.eventlab.timerange, threshold=1)
-```
 
 
 ### Correlations
