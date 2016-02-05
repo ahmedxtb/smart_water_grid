@@ -396,15 +396,43 @@ plot.pressure.hourly.var <- ggplot(df.pressure.hourly, aes(x=Time, y=var, color=
 plot.conductivity.hourly.var <- ggplot(df.conductivity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly variance)") + guides(col=guide_legend(ncol=1))
 plot.acidity.hourly.var <- ggplot(df.acidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Acidity (hourly variance)") + guides(col=guide_legend(ncol=1))
 plot.turbidity.hourly.var <- ggplot(df.turbidity.hourly, aes(x=Time, y=var, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly variance)") + guides(col=guide_legend(ncol=1))
+```
 
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.temperature.hourly.var + scale_y_log10()
+```
+
+Again, we see the seasonal differences in the hourly temperature variance.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.flow.hourly.var + scale_y_log10()
+```
+
+Some flow variables change a lot more (2 orders of magnitude) than others.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.pressure.hourly.var + scale_y_log10()
+```
+
+Again, we see some peaks in which the hourly pressure variance is more than 1 order of magnitude higher than normal.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.conductivity.hourly.var + scale_y_log10()
+```
+
+Due to the low frequency of measurements, hourly variance data is missing for a lot of the time, except for the PR.PNB_TR* measurements after November 2014.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.acidity.hourly.var + scale_y_log10()
+```
+
+For hourly variance in acidity, the number of data points varies between variable and furthermore we observe a lot of gaps in the data.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.turbidity.hourly.var + scale_y_log10()
 ```
 
+For hourly variance in turbidity we observe some peaks and periods with higher variance (April to June 2015 for FR.PNB_*).
 
 
 ### Heatmaps of Eventlab alarm events
