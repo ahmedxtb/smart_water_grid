@@ -177,7 +177,7 @@ head(files.all, n=4)
 
 ### Time range
 
-According to the documentation measurements are done in the time range January 2014 to December 2015. We confirmed this by looking at the data. We also observe that some variables are only available in specific time ranges, often data is missing in large blocks of this 2-year time range.
+According to the documentation measurements are done in the time range January 2014 to December 2015. We confirmed this by looking at the data. We also observe that some variables are only available in specific time ranges, often data is missing in large blocks of this 2-year time range (see graph below).
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 setwd(dir.data)
@@ -219,7 +219,7 @@ files.other <- Reduce(setdiff, list(files.all, files.eventlab, files.temperature
 
 ### Predictor and response variables
 
-We are interested in Eventlab measurements (variable names `*vitnor*`) as **response variables**
+We are interested in Eventlab measurements (variable names `*vitnor*`) as **response variables**:
 
 * There are `r length(files.eventlab)` variables for Eventlab measurements
 * These represent `r length(files.eventlab)/3` Eventlab sensors, each of which produce a set of three variables (`*vitnor1*`, `*vitnor2*` and `*vitnor3*`)
@@ -254,7 +254,7 @@ files.response <- list.files(path=dir.data, pattern=pattern.response)
 variables.response <- createvariablefromfilename(files.response)
 ```
 
-Based on large blocks of consecutive data seen in exploratory plots and multiple peaks of Eventlab variables exceeding the threshold we decided to focus on the `r variables.response` variable as response variable.
+Based on large blocks of consecutive data seen in exploratory plots and multiple peaks of Eventlab variables exceeding the threshold we decided to focus on the `r variables.response` variable as response variable as a first exploratory step:
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 setwd(dir.data)
@@ -264,7 +264,8 @@ plot.response + ggtitle("Eventlab - days timescale") + scale_x_datetime(limits =
 plot.response + ggtitle("Eventlab - hours timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.2, time.end.2)))
 plot.response + ggtitle("Eventlab - minutes timescale") + scale_x_datetime(limits = as.POSIXct(c(time.begin.3, time.end.3)))
 ```
-Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the Eventlab values can rise and exceed the threshold (>1 resp >1.5) abruptly in a matter of minutes and that this process can repeat itself in less than an hour.
+
+Zooming in on a specific Eventlab alarm event starting around `r time.begin.3` we observe that the Eventlab values can rise and exceed the threshold (>1 resp >1.5) in a matter of minutes, sometimes falling abruptly, sometimes more gradually, and that this process can repeat itself in less than an hour.
 
 
 
@@ -281,7 +282,7 @@ Start of our approach was to do the following:
 1. Aggregating hourly statistics: looking at mean, variance, min and max per hour
 2. Subsetting: by selecting variables and time range
 
-We decided to aggregate data for multiple reasons: in order to compress our data set, to increase the chances of different variables both having a value for a given time, to aggregate the number of peak events (in Eventlab measurements, not one event per minute) and also to increase our chances of finding correlated signals in which a small time lag between variables is present (~ hour time scale).
+We decided to aggregate data for multiple reasons: in order to compress our data set, to increase the chances of different variables both having a value for a given time so that they can be correlated/compared, to reduce the number of peak Eventlab events (instead of one event per minute) and also to increase our chances of finding correlated signals in which a small time lag between variables is present (~ hour time scale).
 
 With regard to subsetting, we selected temperature, flow, pressure, conductivity, acidity and turbidity as potential predictor variables and Eventlab measurements as response variables. We chose not to look into the 'other' measured quantities for now, especially since we have limited background of their meaning. Also, we looked at specific time ranges in order to simplify our investigation.
 
@@ -334,6 +335,8 @@ plot.eventlab.hourly.var + scale_y_log10()
 
 We notice many peak events above the orange and red thresholds (>1 resp >1.5) for Eventlab sensor data.
 
+Furthermore, the graphs of hourly maximums and hourly variance look very similar because a high hourly max usually corresponds with an abrupt peak (within hour time window) meaning that the hourly variance is high as well.
+
 
 ### Hourly means for (potential) predictor variables
 
@@ -344,14 +347,42 @@ plot.pressure.hourly.mean <- ggplot(df.pressure.hourly, aes(x=Time, y=mean, colo
 plot.conductivity.hourly.mean <- ggplot(df.conductivity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Conductivity (hourly means)") + guides(col=guide_legend(ncol=1))
 plot.acidity.hourly.mean <- ggplot(df.acidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Acidity (hourly means)") + guides(col=guide_legend(ncol=1))
 plot.turbidity.hourly.mean <- ggplot(df.turbidity.hourly, aes(x=Time, y=mean, color=Variable)) + geom_point() + ggtitle("Turbidity (hourly means)") + guides(col=guide_legend(ncol=1))
+```
 
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.temperature.hourly.mean
+```
+
+We observe what looks like steam conduits with temperature 100 degrees Celcius, some hot water measurements in the 20 to 75 degrees region, plus seasonal changes in mean water temperature.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.flow.hourly.mean
+```
+
+Mean flow is in the 0 to 700 m^3/hour region, with some outliers on both the positive and negative sides (could be leaks). In the graph below we also see negative outliers in mean pressure:
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.pressure.hourly.mean + scale_y_log10()
+```
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.conductivity.hourly.mean + scale_y_log10()
+```
+
+We have 2 measured variables for conductivity. In the plot above we see large drops in one of these conductivity variables between March and May 2014.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.acidity.hourly.mean + scale_y_log10()
+```
+
+The single outlier in this unvalidated data makes the fluctuations in the above plot harder to read, although we see some clear positive and negative outliers.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 plot.turbidity.hourly.mean + scale_y_log10()
 ```
+
+We have 4 measured variables describing turbidity. We see some fluctuations in the long time range (months) and peaks/regions with higher turbidity. Turbidity could be related to water quality, although we are lacking specific domain knowledge here.
+
 
 
 ### Hourly variances
@@ -378,8 +409,7 @@ plot.turbidity.hourly.var + scale_y_log10()
 
 ### Heatmaps of Eventlab alarm events
 
-
-Relation between different Eventlab alarm events (within certain time period)
+In order to investigate the relationship between different Eventlab alarm events within a specific time period, we plot a quick heat map:
 
 ```{r, warning=FALSE, message=FALSE, cache=TRUE, echo=FALSE}
 selectedvariables <- levels(df.eventlab.hourly$Variable)
@@ -398,6 +428,8 @@ drawheatmapwithdendrogram(df.eventlab.selection)
 # Might give us ideas about which Eventlab sensor alarms are related
 ```
 
+We observe small groups (often triples) of more closely related variables. One triple displays a somewhat larger distance to the others, but furthermore no clear pattern is visible. The grey area on the right corresponds to Eventlab measurements that did not have an alarm value (above the threshold) at all in the given time frame.
+
 
 
 ### Correlations
@@ -415,28 +447,34 @@ df6 <- subset(df.conductivity.hourly, select=c(Time, Variable, var))
 df7 <- subset(df.temperature.hourly, Variable %in% levels(df.temperature.hourly$Variable)[1:40], select=c(Time, Variable, var))
 ```
 
-Correlate Eventlab with flow variances
+#### Eventlab and flow variances
+
+A correlation plot for Eventlab and flow variances mainly seems to display correlations *within* the flow and Eventlab datasets, not *between* them:
 
 ```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
 # Plot correlations
 plotcorrelations(rbind(df1, df2), begintime, endtime)
 ```
 
-Correlate Eventlab with pressure variances
+
+#### Eventlab and pressure variances
+
+A correlation plot of Eventlab and pressure variances displays a lot of correlations *within* the pressure and Eventlab datasets, not *between* them:
 
 ```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
 plotcorrelations(rbind(df1, df2, df3), begintime, endtime)
 ```
 
-Correlate Eventlab, acidity, turbidity, conductivity variances
+
+#### Eventlab, acidity, turbidity and conductivity variances
+
+We find the following correlation plot for Eventlab, acidity, turbidity and conductivity variances:
 
 ```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
 plotcorrelations(rbind(df1, df4, df5, df6), begintime, endtime)
 ```
 
-We observe that one of the turbidity variables correlates strongly with two of the Eventlab variables!
-
-
+And observe that one of the turbidity variables correlates strongly with two of the Eventlab variables! Note that this is a negative correlation though, requiring further research.
 
 ```{r, warning=FALSE, message=FALSE, cache=FALSE, echo=FALSE}
 #Correlate Eventlab with temperature variances
